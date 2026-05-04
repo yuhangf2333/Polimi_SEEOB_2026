@@ -1,0 +1,231 @@
+{
+  "dataset": "tp_ipt_analysis_h3_res9",
+  "title": "TP-IPT decision analysis layer, H3 resolution 9",
+  "generated_at_utc": "2026-05-03T20:40:23.996359+00:00",
+  "h3_resolution": 9,
+  "h3_count": 15547,
+  "hotspot_cluster_count": 168,
+  "high_priority_h3_count": 5970,
+  "score_means": {
+    "svi_score": 36.06,
+    "pt_deficit_score": 65.521,
+    "essential_services_deficit_score": 70.524,
+    "eo_territorial_disadvantage_score": 33.337,
+    "hotspot_score": 55.134,
+    "intervention_priority_score": 55.748,
+    "data_confidence_score": 87.277
+  },
+  "priority_class_distribution": [
+    {
+      "priority_class": "Low priority",
+      "h3_count": 3386,
+      "share": 0.217791,
+      "percent": 21.78
+    },
+    {
+      "priority_class": "Medium priority",
+      "h3_count": 3245,
+      "share": 0.208722,
+      "percent": 20.87
+    },
+    {
+      "priority_class": "High priority",
+      "h3_count": 3165,
+      "share": 0.203576,
+      "percent": 20.36
+    },
+    {
+      "priority_class": "Monitor",
+      "h3_count": 2946,
+      "share": 0.18949,
+      "percent": 18.95
+    },
+    {
+      "priority_class": "Strategic priority",
+      "h3_count": 2805,
+      "share": 0.180421,
+      "percent": 18.04
+    }
+  ],
+  "hotspot_class_distribution": [
+    {
+      "hotspot_class": "Moderate hotspot",
+      "h3_count": 5893,
+      "share": 0.379044,
+      "percent": 37.9
+    },
+    {
+      "hotspot_class": "High hotspot",
+      "h3_count": 5271,
+      "share": 0.339036,
+      "percent": 33.9
+    },
+    {
+      "hotspot_class": "Watchlist",
+      "h3_count": 3065,
+      "share": 0.197144,
+      "percent": 19.71
+    },
+    {
+      "hotspot_class": "Critical hotspot",
+      "h3_count": 1111,
+      "share": 0.071461,
+      "percent": 7.15
+    },
+    {
+      "hotspot_class": "Low concern",
+      "h3_count": 207,
+      "share": 0.013314,
+      "percent": 1.33
+    }
+  ],
+  "confidence_class_distribution": [
+    {
+      "confidence_class": "High confidence",
+      "h3_count": 15547,
+      "share": 1.0,
+      "percent": 100.0
+    }
+  ],
+  "typology_distribution": [
+    {
+      "typology": "General transport poverty hotspot",
+      "h3_count": 10177,
+      "share": 0.654596,
+      "percent": 65.46
+    },
+    {
+      "typology": "Lower concern",
+      "h3_count": 3218,
+      "share": 0.206985,
+      "percent": 20.7
+    },
+    {
+      "typology": "Essential-services desert",
+      "h3_count": 1780,
+      "share": 0.114492,
+      "percent": 11.45
+    },
+    {
+      "typology": "Active but disconnected area",
+      "h3_count": 271,
+      "share": 0.017431,
+      "percent": 1.74
+    },
+    {
+      "typology": "Dense underserved fringe",
+      "h3_count": 63,
+      "share": 0.004052,
+      "percent": 0.41
+    },
+    {
+      "typology": "Dispersed rural fragility",
+      "h3_count": 32,
+      "share": 0.002058,
+      "percent": 0.21
+    },
+    {
+      "typology": "Growth-transport mismatch",
+      "h3_count": 6,
+      "share": 0.000386,
+      "percent": 0.04
+    }
+  ],
+  "top_10_h3": [
+    {
+      "h3_id": "891f9951c33ffff",
+      "municipality_name": "Vernate",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 67.075,
+      "hotspot_score": 77.507,
+      "typology": "Active but disconnected area",
+      "dominant_drivers": "public transport deficit; essential services deficit; EO territorial disadvantage"
+    },
+    {
+      "h3_id": "891f99cacc7ffff",
+      "municipality_name": "Nerviano",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 66.413,
+      "hotspot_score": 82.374,
+      "typology": "Dense underserved fringe",
+      "dominant_drivers": "public transport deficit; social vulnerability; essential services deficit"
+    },
+    {
+      "h3_id": "891f99cacd3ffff",
+      "municipality_name": "Nerviano",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 66.355,
+      "hotspot_score": 82.228,
+      "typology": "Dense underserved fringe",
+      "dominant_drivers": "public transport deficit; social vulnerability; essential services deficit"
+    },
+    {
+      "h3_id": "891f99ca17bffff",
+      "municipality_name": "Parabiago",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 66.129,
+      "hotspot_score": 78.565,
+      "typology": "Active but disconnected area",
+      "dominant_drivers": "public transport deficit; essential services deficit; EO territorial disadvantage"
+    },
+    {
+      "h3_id": "891f99d9863ffff",
+      "municipality_name": "Arconate",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 64.835,
+      "hotspot_score": 78.384,
+      "typology": "Dense underserved fringe",
+      "dominant_drivers": "public transport deficit; essential services deficit; social vulnerability"
+    },
+    {
+      "h3_id": "891f991aecfffff",
+      "municipality_name": "Cambiago",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 63.8,
+      "hotspot_score": 73.327,
+      "typology": "Active but disconnected area",
+      "dominant_drivers": "public transport deficit; essential services deficit; EO territorial disadvantage"
+    },
+    {
+      "h3_id": "891f99ca3b3ffff",
+      "municipality_name": "Parabiago",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 63.463,
+      "hotspot_score": 78.14,
+      "typology": "General transport poverty hotspot",
+      "dominant_drivers": "public transport deficit; essential services deficit; social vulnerability"
+    },
+    {
+      "h3_id": "891f99ca14bffff",
+      "municipality_name": "Parabiago",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 63.159,
+      "hotspot_score": 79.115,
+      "typology": "General transport poverty hotspot",
+      "dominant_drivers": "public transport deficit; essential services deficit; EO territorial disadvantage"
+    },
+    {
+      "h3_id": "891f99d983bffff",
+      "municipality_name": "Arconate",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 62.949,
+      "hotspot_score": 73.51,
+      "typology": "Essential-services desert",
+      "dominant_drivers": "essential services deficit; public transport deficit; social vulnerability"
+    },
+    {
+      "h3_id": "891f9836c27ffff",
+      "municipality_name": "Robecchetto con Induno",
+      "intervention_priority_score": 100.0,
+      "intervention_priority_formula_score": 61.989,
+      "hotspot_score": 67.569,
+      "typology": "Essential-services desert",
+      "dominant_drivers": "essential services deficit; public transport deficit; social vulnerability"
+    }
+  ],
+  "caveats": [
+    "Road connectivity is approximated from built-up score and artificial land-cover because webdata does not currently include a road-network connectivity layer.",
+    "Jobs are an employment opportunity proxy aggregated at municipality level, not workplace-level accessibility.",
+    "GTFS/NeTEx city2graph dependency is used for explanation and intervention logic, not as a separate main score component."
+  ]
+}
