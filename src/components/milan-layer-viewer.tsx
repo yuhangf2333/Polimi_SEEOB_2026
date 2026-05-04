@@ -3253,6 +3253,12 @@ function AnalysisDashboard({
                   Analysis priority layer is not available.
                 </div>
               )}
+              {showAnalysisChat ? (
+                <AnalysisFloatingChat
+                  dashboardContext={dashboardContext}
+                  llmSettings={llmSettings}
+                />
+              ) : null}
               <DashboardMapLegend />
             </div>
           </CardContent>
@@ -3260,12 +3266,7 @@ function AnalysisDashboard({
 
         <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-2 lg:row-span-2")}>
           <CardContent
-            className={cn(
-              "grid h-full min-h-0 gap-2 p-0",
-              showAnalysisChat
-                ? "grid-rows-[1fr_1fr_minmax(190px,0.9fr)]"
-                : "grid-rows-2",
-            )}
+            className="grid h-full min-h-0 grid-rows-[minmax(280px,1fr)_minmax(250px,0.82fr)] gap-2 p-0"
           >
             <div
               className="flex min-h-0 flex-col justify-center overflow-hidden rounded-2xl bg-muted/40 p-5"
@@ -3324,13 +3325,6 @@ function AnalysisDashboard({
                 Export report
               </Button>
             </div>
-
-            {showAnalysisChat ? (
-              <AnalysisChatBox
-                dashboardContext={dashboardContext}
-                llmSettings={llmSettings}
-              />
-            ) : null}
           </CardContent>
         </Card>
 
@@ -3763,12 +3757,62 @@ function ScoreGauge({
   );
 }
 
-function AnalysisChatBox({
+function AnalysisFloatingChat({
   dashboardContext,
   llmSettings,
 }: {
   dashboardContext: ReturnType<typeof buildAnalysisDashboardContext>;
   llmSettings: LlmSettings;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const canAsk =
+    llmSettings.enabled &&
+    llmSettings.baseUrl.trim() &&
+    llmSettings.model.trim();
+
+  return (
+    <div
+      className="absolute right-4 top-4 z-30 flex max-w-[calc(100%-2rem)] flex-col items-end gap-2"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Button
+        type="button"
+        variant="secondary"
+        className="h-10 rounded-full bg-background/85 px-3 shadow-lg ring-1 ring-border/60 backdrop-blur-md"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <BrainCircuit data-icon="inline-start" />
+        Analysis chat
+        <Badge
+          variant={canAsk ? "secondary" : "outline"}
+          className="ml-1 h-5 rounded-full px-2 text-[11px]"
+        >
+          {canAsk ? "Ready" : "Off"}
+        </Badge>
+      </Button>
+
+      {open ? (
+        <AnalysisChatBox
+          className="h-[min(640px,calc(100vh-8rem))] w-[min(680px,calc(100vw-2rem))] shadow-2xl"
+          dashboardContext={dashboardContext}
+          llmSettings={llmSettings}
+          onClose={() => setOpen(false)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function AnalysisChatBox({
+  className,
+  dashboardContext,
+  llmSettings,
+  onClose,
+}: {
+  className?: string;
+  dashboardContext: ReturnType<typeof buildAnalysisDashboardContext>;
+  llmSettings: LlmSettings;
+  onClose?: () => void;
 }) {
   const [prompt, setPrompt] = React.useState(ANALYSIS_PRESET_QUESTIONS[0]);
   const [messages, setMessages] = React.useState<AnalysisChatMessage[]>([
@@ -3786,7 +3830,6 @@ function AnalysisChatBox({
   const canAsk =
     llmSettings.enabled &&
     llmSettings.baseUrl.trim() &&
-    llmSettings.apiKey.trim() &&
     llmSettings.model.trim();
 
   const askAssistant = React.useCallback(
@@ -3836,55 +3879,72 @@ function AnalysisChatBox({
   );
 
   return (
-    <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/70 p-4">
+    <div
+      className={cn(
+        "flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/90 p-3 shadow-sm ring-1 ring-border/50 backdrop-blur",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
             <BrainCircuit className="size-5" />
           </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">Analysis chat</div>
+            <div className="truncate text-sm font-semibold">Analysis chatbot</div>
             <div className="truncate text-xs text-muted-foreground">
-              OpenAI-compatible endpoint
+              Ask the selected evidence
             </div>
           </div>
         </div>
         <Badge variant={canAsk ? "secondary" : "outline"}>
           {canAsk ? "Ready" : "Off"}
         </Badge>
+        {onClose ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={onClose}
+          >
+            <X />
+            <span className="sr-only">Close analysis chat</span>
+          </Button>
+        ) : null}
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-xl bg-muted/35 p-2">
-        <div className="flex flex-col gap-2">
-          {messages.slice(-4).map((message, index) => (
+      <ScrollArea className="mt-3 min-h-0 flex-1 rounded-xl bg-muted/35">
+        <div className="flex flex-col gap-3 p-3">
+          {messages.slice(-5).map((message, index) => (
             <div
               key={`${message.role}-${index}`}
               className={cn(
-                "max-w-[92%] rounded-xl px-3 py-2 text-xs leading-5",
+                "max-w-[94%] rounded-xl px-4 py-3 text-sm leading-6",
                 message.role === "user"
                   ? "self-end bg-primary text-primary-foreground"
                   : "self-start bg-background/80 text-foreground",
               )}
             >
-              {message.content}
+              <ChatMessageContent content={message.content} />
             </div>
           ))}
           {state.status === "loading" ? (
-            <div className="self-start rounded-xl bg-background/80 px-3 py-2 text-xs text-muted-foreground">
+            <div className="self-start rounded-xl bg-background/80 px-4 py-3 text-sm text-muted-foreground">
               Reading dashboard evidence...
             </div>
           ) : null}
         </div>
-      </div>
+      </ScrollArea>
 
       <div className="mt-2 flex flex-wrap gap-1.5">
-        {ANALYSIS_PRESET_QUESTIONS.slice(0, 2).map((preset) => (
+        {ANALYSIS_PRESET_QUESTIONS.slice(0, 3).map((preset) => (
           <Button
             key={preset}
             type="button"
             size="sm"
             variant="secondary"
-            className="h-7 px-2 text-xs"
+            className="h-8 max-w-full truncate px-3 text-xs"
             onClick={() => setPrompt(preset)}
           >
             {preset}
@@ -3898,10 +3958,10 @@ function AnalysisChatBox({
           onChange={(event) => setPrompt(event.target.value)}
           placeholder={
             canAsk
-              ? "Ask about the selected evidence..."
-              : "Enable AI and set API key in Settings."
+              ? "Ask about this hotspot..."
+              : "Enable AI and set a model in Settings."
           }
-          className="min-h-10 resize-none text-sm"
+          className="min-h-9 resize-none text-sm"
           disabled={!canAsk}
         />
         <Button
@@ -3916,6 +3976,116 @@ function AnalysisChatBox({
       </div>
     </div>
   );
+}
+
+function ChatMessageContent({ content }: { content: string }) {
+  const blocks = parseChatMarkdown(content);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {blocks.map((block, index) => {
+        if (block.type === "list") {
+          return (
+            <ul key={index} className="flex flex-col gap-2">
+              {block.items.map((item, itemIndex) => (
+                <li key={itemIndex} className="flex gap-2">
+                  <CheckCircle2 className="mt-1 size-3.5 shrink-0 text-primary" />
+                  <span>{renderInlineMarkdown(item)}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p
+            key={index}
+            className={cn(
+              "whitespace-pre-wrap",
+              block.emphasis ? "font-medium text-foreground" : "text-foreground/90",
+            )}
+          >
+            {renderInlineMarkdown(block.text)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+type ChatMarkdownBlock =
+  | { type: "paragraph"; text: string; emphasis?: boolean }
+  | { type: "list"; items: string[] };
+
+function parseChatMarkdown(content: string): ChatMarkdownBlock[] {
+  const normalized = content
+    .replace(/\r\n/g, "\n")
+    .replace(/\s+#{1,4}\s+/g, "\n")
+    .replace(/(\S)\s+(\d+[.)])\s+/g, "$1\n$2 ")
+    .replace(/(\S)\s+\*\s+/g, "$1\n* ");
+  const lines = normalized.split("\n");
+  const blocks: ChatMarkdownBlock[] = [];
+  let paragraph: string[] = [];
+  let listItems: string[] = [];
+
+  const flushParagraph = () => {
+    const text = paragraph
+      .join(" ")
+      .replace(/^#{1,4}\s+/, "")
+      .trim();
+    if (text) {
+      blocks.push({
+        type: "paragraph",
+        text,
+        emphasis: /^(\*\*)?[\w\s/-]+:/.test(text),
+      });
+    }
+    paragraph = [];
+  };
+  const flushList = () => {
+    if (listItems.length) blocks.push({ type: "list", items: listItems });
+    listItems = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const listMatch = line.match(/^(?:[-*]|\d+[.)])\s+(.+)$/);
+    if (listMatch) {
+      flushParagraph();
+      listItems.push(listMatch[1].trim());
+      continue;
+    }
+
+    flushList();
+    paragraph.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+
+  return blocks.length ? blocks : [{ type: "paragraph", text: content }];
+}
+
+function renderInlineMarkdown(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+
+  return parts.map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong key={index} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
 }
 
 async function exportAnalysisReport({

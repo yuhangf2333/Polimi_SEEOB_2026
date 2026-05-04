@@ -37,9 +37,9 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const baseUrl = payload.baseUrl?.trim();
-  const apiKey = payload.apiKey?.trim();
-  const model = payload.model?.trim();
+  const baseUrl = payload.baseUrl?.trim() || process.env.LLM_BASE_URL?.trim();
+  const apiKey = payload.apiKey?.trim() || process.env.LLM_API_KEY?.trim();
+  const model = payload.model?.trim() || process.env.LLM_MODEL?.trim();
   const question = payload.question?.trim();
 
   if (!baseUrl || !apiKey || !model || !question) {
@@ -48,6 +48,13 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const envTemperature = Number(process.env.LLM_TEMPERATURE);
+  const temperature = Number.isFinite(payload.temperature)
+    ? payload.temperature
+    : Number.isFinite(envTemperature)
+      ? envTemperature
+      : 0.2;
 
   let endpoint: URL;
 
@@ -75,7 +82,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model,
-        temperature: payload.temperature ?? 0.2,
+        temperature,
         messages: [
           {
             role: "system",
@@ -131,4 +138,3 @@ export async function POST(request: Request) {
     clearTimeout(timeout);
   }
 }
-

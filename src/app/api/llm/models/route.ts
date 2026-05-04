@@ -19,8 +19,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const baseUrl = payload.baseUrl?.trim();
-  const apiKey = payload.apiKey?.trim();
+  const baseUrl = payload.baseUrl?.trim() || process.env.LLM_BASE_URL?.trim();
+  const apiKey = payload.apiKey?.trim() || process.env.LLM_API_KEY?.trim();
 
   if (!baseUrl || !apiKey) {
     return Response.json(
@@ -87,4 +87,3 @@ export async function POST(request: Request) {
     clearTimeout(timeout);
   }
 }
-

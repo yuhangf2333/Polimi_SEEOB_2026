@@ -38,16 +38,16 @@ export const LLM_PROVIDER_PRESETS: Record<
   },
   "openai-compatible": {
     label: "Custom OpenAI-compatible",
-    baseUrl: "https://api.example.com/v1",
-    defaultModel: "gpt-4o-mini",
+    baseUrl: "https://token-plan-cn.xiaomimimo.com/v1",
+    defaultModel: "mimo-v2-omni",
   },
 };
 
 export const DEFAULT_LLM_SETTINGS: LlmSettings = {
-  enabled: false,
-  provider: "openai",
-  baseUrl: "https://api.openai.com/v1",
+  enabled: true,
+  provider: "openai-compatible",
+  baseUrl: "https://token-plan-cn.xiaomimimo.com/v1",
   apiKey: "",
-  model: "gpt-4o-mini",
-  temperature: 0.2,
+  model: "mimo-v2-omni",
+  temperature: 0.1,
 };

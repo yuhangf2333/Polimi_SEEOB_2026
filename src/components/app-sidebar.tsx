@@ -72,6 +72,7 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 }
 
 const COMMON_LLM_MODEL_OPTIONS = [
+  "mimo-v2-omni",
   "gpt-4o-mini",
   "gpt-4o",
   "gpt-4.1-mini",
@@ -521,8 +522,7 @@ export function AppSidebar({
                         onClick={testLlmConnection}
                         disabled={
                           connectionStatus === "testing" ||
-                          !llmSettings.baseUrl.trim() ||
-                          !llmSettings.apiKey.trim()
+                          !llmSettings.baseUrl.trim()
                         }
                       >
                         {connectionStatus === "testing" ? "Loading" : "Models"}
@@ -536,7 +536,7 @@ export function AppSidebar({
                     <Input
                       type="password"
                       value={llmSettings.apiKey}
-                      placeholder="sk-..."
+                      placeholder="Server configured"
                       onChange={(event) =>
                         onLlmSettingsChange({
                           ...llmSettings,
@@ -591,8 +591,8 @@ export function AppSidebar({
                     </p>
                   ) : null}
                   <p className="text-xs leading-5 text-muted-foreground">
-                    The key is stored in this browser for the local dashboard
-                    workflow and sent only when you ask the assistant.
+                    Leave the key empty to use the server-configured credential.
+                    A browser key overrides it only for this local dashboard.
                   </p>
                 </div>
               </SheetContent>
