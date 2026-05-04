@@ -1,0 +1,17 @@
+.git
+.gitignore
+.next
+node_modules
+out
+build
+coverage
+
+*.log
+*.tsbuildinfo
+next-env.d.ts
+ui-check*.png
+
+.env
+.env.*
+.vercel
+.DS_Store

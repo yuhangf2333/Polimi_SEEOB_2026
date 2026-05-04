@@ -2021,7 +2021,7 @@ function GeoJsonLayer({
         data: `/api/layers/${layer.id}?v=${layer.sizeBytes}`,
         promoteId,
         buffer: isLargeSurface ? 0 : undefined,
-        tolerance: isLargeSurface ? 0.7 : undefined,
+        tolerance: isLargeSurface ? 1.15 : undefined,
         maxzoom: isLargeSurface ? 11 : undefined,
       });
     }

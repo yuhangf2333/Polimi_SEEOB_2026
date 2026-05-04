@@ -1,6 +1,5 @@
-import { MilanLayerViewer } from "@/components/milan-layer-viewer";
-import { getLayerGroups } from "@/lib/layer-registry";
+import { MilanHomepage } from "@/components/milan/MilanHomepage";
 
 export default function Home() {
-  return <MilanLayerViewer groups={getLayerGroups()} />;
+  return <MilanHomepage />;
 }

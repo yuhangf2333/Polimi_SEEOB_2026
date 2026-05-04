@@ -162,9 +162,9 @@ export function AppSidebar({
   const data = {
     teams: [
       {
-        name: "Milan GIS",
+        name: "{{name}}",
         logo: <GalleryVerticalEndIcon />,
-        plan: "Layer Platform",
+        plan: "{{name}}",
       },
     ],
     navMain: [

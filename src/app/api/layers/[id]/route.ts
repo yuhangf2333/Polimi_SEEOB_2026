@@ -33,10 +33,11 @@ export async function GET(
 
     const { encoding, fileStat, responsePath } = responseAsset;
     const headers: Record<string, string> = {
-      "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+      "Cache-Control": "public, max-age=31536000, immutable",
       "Content-Length": String(fileStat.size),
       "Content-Type": "application/geo+json; charset=utf-8",
       "Vary": "Accept-Encoding",
+      "X-Content-Type-Options": "nosniff",
       "X-Layer-Name": encodeURIComponent(layer.name),
     };
 

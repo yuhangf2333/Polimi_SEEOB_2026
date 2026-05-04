@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+import "./homepage.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Milan GIS Layer Viewer",
-  description: "Interactive Milan GIS layer viewer built with mapcn and shadcn.",
+  title: "{{name}}",
+  description: "Interactive Milan GIS decision-support platform.",
 };
 
 export default function RootLayout({
@@ -28,7 +29,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col overflow-hidden">
+      <body className="min-h-full">
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

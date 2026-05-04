@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation"
+import { MilanLayerViewer } from "@/components/milan-layer-viewer";
+import { getLayerGroups } from "@/lib/layer-registry";
 
 export default function Page() {
-  redirect("/")
+  return <MilanLayerViewer groups={getLayerGroups()} />;
 }

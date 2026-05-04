@@ -53,21 +53,39 @@ type AnalysisHotspotCard = {
 let cardsCache: AnalysisHotspotCard[] | null = null;
 let summaryCache: AnalysisSummary | null = null;
 
-function analysisRootCandidates() {
-  const projectRoot = /*turbopackIgnore: true*/ process.cwd();
+const summaryPathCandidates = [
+  path.join(/*turbopackIgnore: true*/ process.cwd(), "data", "analysis", "summary.json"),
+  path.join(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "data",
+    "geojson",
+    "analysis",
+    "summary.json",
+  ),
+];
 
-  return [
-    path.join(projectRoot, "data", "analysis"),
-    path.join(projectRoot, "data", "geojson", "analysis"),
-  ];
-}
+const hotspotCardsPathCandidates = [
+  path.join(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "data",
+    "analysis",
+    "tables",
+    "ai_hotspot_cards.json",
+  ),
+  path.join(
+    /*turbopackIgnore: true*/ process.cwd(),
+    "data",
+    "geojson",
+    "analysis",
+    "tables",
+    "ai_hotspot_cards.json",
+  ),
+];
 
-async function firstExistingPath(relativePath: string) {
-  for (const root of analysisRootCandidates()) {
-    const candidate = path.join(root, relativePath);
-
+async function firstExistingPath(candidates: string[]) {
+  for (const candidate of candidates) {
     try {
-      await fs.access(candidate);
+      await fs.access(/*turbopackIgnore: true*/ candidate);
       return candidate;
     } catch {
       // Try the next known local data root.
@@ -80,11 +98,11 @@ async function firstExistingPath(relativePath: string) {
 async function readAnalysisSummary() {
   if (summaryCache) return summaryCache;
 
-  const summaryPath = await firstExistingPath("summary.json");
+  const summaryPath = await firstExistingPath(summaryPathCandidates);
   if (!summaryPath) return null;
 
   summaryCache = JSON.parse(
-    await fs.readFile(summaryPath, "utf8"),
+    await fs.readFile(/*turbopackIgnore: true*/ summaryPath, "utf8"),
   ) as AnalysisSummary;
 
   return summaryCache;
@@ -93,12 +111,10 @@ async function readAnalysisSummary() {
 async function readHotspotCards() {
   if (cardsCache) return cardsCache;
 
-  const cardsPath = await firstExistingPath(
-    path.join("tables", "ai_hotspot_cards.json"),
-  );
+  const cardsPath = await firstExistingPath(hotspotCardsPathCandidates);
   if (!cardsPath) return [];
 
-  const rawCards = await fs.readFile(cardsPath, "utf8");
+  const rawCards = await fs.readFile(/*turbopackIgnore: true*/ cardsPath, "utf8");
   cardsCache = JSON.parse(rawCards.replace(/\bNaN\b/g, "null")) as AnalysisHotspotCard[];
 
   return cardsCache;

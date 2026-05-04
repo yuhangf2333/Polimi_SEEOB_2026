@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Milan Map Viewer
 
-## Getting Started
+Next.js GIS viewer for the Milan TP-IPT layers. The app serves the UI and streams local GeoJSON assets from `data/` through API routes, so production deployment needs a Node.js server rather than a static export.
 
-First, run the development server:
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Docker
 
-To learn more about Next.js, take a look at the following resources:
+Build and run the production image:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker build -t milan-map-viewer .
+docker run --rm -p 3000:3000 milan-map-viewer
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Or use Compose:
 
-## Deploy on Vercel
+```bash
+docker compose up --build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The image uses Next.js standalone output and includes:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `.next/standalone`
+- `.next/static`
+- `public/`
+- `data/`
+
+If you use the Google Maps embedded basemap, pass the public key at build time because `NEXT_PUBLIC_*` values are bundled by Next.js during `next build`:
+
+PowerShell:
+
+```powershell
+$env:NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY="your-key"
+docker compose up --build
+```
+
+Bash:
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY="your-key" docker compose up --build
+```
+
+When `data/` changes, rebuild the image so the deployed container has the latest GIS assets.

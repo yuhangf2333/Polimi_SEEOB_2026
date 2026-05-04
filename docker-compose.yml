@@ -1,0 +1,13 @@
+services:
+  milan-map-viewer:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY:-}
+    image: milan-map-viewer:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    restart: unless-stopped
