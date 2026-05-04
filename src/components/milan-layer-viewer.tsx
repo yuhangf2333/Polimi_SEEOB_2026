@@ -1977,7 +1977,7 @@ function GeoJsonLayer({
   React.useEffect(() => {
     if (!map || !isLoaded) return;
 
-    const sourceId = `milan-source-${layer.id}`;
+    const sourceId = stableLayerSourceId(layer);
     const fillLayerId = `milan-fill-${layer.id}`;
     const outlineLayerId = `milan-outline-${layer.id}`;
     const lineLayerId = `milan-line-${layer.id}`;
@@ -2218,7 +2218,6 @@ function GeoJsonLayer({
         for (const id of [...layerIds].reverse()) {
           if (map.getLayer(id)) map.removeLayer(id);
         }
-        if (map.getSource(sourceId)) map.removeSource(sourceId);
       } catch {
         // Map theme changes can dispose the MapLibre instance before layers
         // finish cleanup in dev mode.
@@ -2227,6 +2226,10 @@ function GeoJsonLayer({
   }, [contrast, isLoaded, layer, map, material, onFeatureSelect, opacity]);
 
   return null;
+}
+
+function stableLayerSourceId(layer: PublicMilanLayer) {
+  return `milan-source-${layer.fileName.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
 }
 
 function MainDirectoryHeader({
