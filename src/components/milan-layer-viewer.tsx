@@ -9,13 +9,15 @@ import type {
   StyleSpecification,
 } from "maplibre-gl";
 import {
-  BrainCircuit,
+  Bot,
   ChevronRight,
   CheckCircle2,
+  ChevronDown,
   DatabaseZap,
   FileText,
   HandHeart,
   Lightbulb,
+  Maximize2,
   Satellite,
   SendHorizontal,
   TramFront,
@@ -25,12 +27,28 @@ import {
 } from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Map as GeoMap, useMap } from "@/components/ui/map";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -39,6 +57,7 @@ import {
   DEFAULT_LLM_SETTINGS,
   type LlmSettings,
 } from "@/lib/llm-settings";
+import { parseChatMarkdown, type ChatMarkdownBlock } from "@/lib/chat-markdown";
 import { cn } from "@/lib/utils";
 import type {
   LayerGroupId,
@@ -87,6 +106,8 @@ type SelectedFeature = {
 };
 
 type FeatureDetailMode = "overview" | "advanced";
+type AnalysisPanelMode = "summary" | "chat";
+type ChatMarkdownTableBlock = Extract<ChatMarkdownBlock, { type: "table" }>;
 
 type FeatureOverviewEntry = {
   key: string;
@@ -709,9 +730,10 @@ const ANALYSIS_DASHBOARD_SUMMARY = {
 };
 
 const ANALYSIS_PRESET_QUESTIONS = [
-  "Why is this area high priority?",
-  "What intervention should come first?",
-  "Which evidence should be validated?",
+  "Is this mainly a transport gap or a service gap? Compare in a table.",
+  "What nearby service, stop and route relationships matter here?",
+  "Give me an actionable intervention priority table.",
+  "Which evidence should be validated before action?",
 ];
 
 const PTAL_FILL_COLOR = [
@@ -2234,8 +2256,10 @@ function stableLayerSourceId(layer: PublicMilanLayer) {
 
 function MainDirectoryHeader({
   activeFunction,
+  action,
 }: {
   activeFunction: PrimaryFunction;
+  action?: React.ReactNode;
 }) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
@@ -2244,6 +2268,7 @@ function MainDirectoryHeader({
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         <span className="truncate font-medium">{activeFunction.label}</span>
       </nav>
+      {action ? <div className="ml-auto flex shrink-0 items-center">{action}</div> : null}
     </header>
   );
 }
@@ -3150,10 +3175,12 @@ function AnalysisDashboard({
   groups,
   theme,
   llmSettings,
+  panelMode,
 }: {
   groups: MilanLayerGroup[];
   theme: ThemeMode;
   llmSettings: LlmSettings;
+  panelMode: AnalysisPanelMode;
 }) {
   const [selectedFeature, setSelectedFeature] =
     React.useState<SelectedFeature | null>(null);
@@ -3198,7 +3225,6 @@ function AnalysisDashboard({
     [breakdown, confidenceScore, hotspotScore, priorityScore, selectedFeature],
   );
   const priorityStatus = priorityState(priorityScore);
-  const showAnalysisChat = llmSettings.enabled;
   const recommendationItems = buildHumanRecommendationItems({
     breakdown,
     confidenceScore,
@@ -3215,9 +3241,9 @@ function AnalysisDashboard({
   };
 
   return (
-    <div className="relative h-full overflow-hidden bg-muted/20 p-2.5 lg:p-3">
-      <div className="grid h-full min-h-0 gap-2 lg:grid-cols-[minmax(0,2.4fr)_minmax(320px,0.72fr)] lg:grid-rows-[minmax(0,1.72fr)_minmax(150px,0.28fr)]">
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-1 lg:row-start-1")}>
+    <div className="relative h-full overflow-hidden bg-muted/20 p-1.5 lg:p-2">
+      <div className="grid h-full min-h-0 gap-1.5 lg:grid-cols-[minmax(0,2.28fr)_minmax(360px,0.72fr)] lg:grid-rows-[minmax(176px,0.29fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2.22fr)_minmax(390px,0.78fr)]">
+        <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-1 lg:row-start-2")}>
           <CardContent className="h-full p-0">
             <div className="relative h-full overflow-hidden rounded-xl bg-muted">
               {priorityLayer ? (
@@ -3253,94 +3279,47 @@ function AnalysisDashboard({
                   Analysis priority layer is not available.
                 </div>
               )}
-              {showAnalysisChat ? (
-                <AnalysisFloatingChat
-                  dashboardContext={dashboardContext}
-                  llmSettings={llmSettings}
-                />
-              ) : null}
               <DashboardMapLegend />
             </div>
           </CardContent>
         </Card>
 
         <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-2 lg:row-span-2")}>
-          <CardContent
-            className="grid h-full min-h-0 grid-rows-[minmax(280px,1fr)_minmax(250px,0.82fr)] gap-2 p-0"
-          >
-            <div
-              className="flex min-h-0 flex-col justify-center overflow-hidden rounded-2xl bg-muted/40 p-5"
-            >
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div
-                  className="inline-flex items-center gap-2 rounded-full bg-background/75 px-3 py-1 text-xs font-semibold"
-                  style={{ color: scoreRiskColor(priorityScore) }}
-                >
-                  {priorityStatus.critical ? <TriangleAlert className="size-4" /> : null}
-                  {priorityStatus.label}
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  Citywide baseline
-                </span>
-              </div>
-              <ScoreGauge
-                label="Intervention priority"
-                value={priorityScore}
-                size="large"
+          <CardContent className="flex h-full min-h-0 flex-col gap-3 p-0">
+            {panelMode === "chat" && llmSettings.enabled ? (
+              <AnalysisChatBox
+                className="min-h-0 flex-1"
+                dashboardContext={dashboardContext}
+                llmSettings={llmSettings}
               />
-              <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                {priorityStatus.description}
-              </p>
-            </div>
-
-            <div className="flex min-h-0 flex-col justify-center overflow-hidden rounded-2xl bg-background/70 p-5">
-              <div className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Lightbulb className="size-5" />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-base font-semibold">
-                    Current recommendation
-                  </div>
-                  <ul className="mt-3 flex flex-col gap-2 text-sm leading-5 text-muted-foreground">
-                    {recommendationItems.map((item) => (
-                      <li key={item} className="flex items-start gap-2">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              <Button
-                type="button"
-                size="default"
-                variant="secondary"
-                className="mt-5 w-fit px-4"
-                onClick={() => {
+            ) : (
+              <AnalysisRecommendationPanel
+                className="min-h-0 flex-1"
+                items={recommendationItems}
+                onExport={() => {
                   void exportAnalysisReport(reportPayload);
                 }}
-              >
-                <FileText data-icon="inline-start" />
-                Export report
-              </Button>
-            </div>
+              />
+            )}
           </CardContent>
         </Card>
 
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-1 lg:row-start-2")}>
-          <CardContent className="flex h-full min-h-0 flex-col justify-center gap-3 p-5">
-            <div className="text-xs font-medium text-muted-foreground">
-              Score breakdown
-            </div>
-            <div className="flex min-h-0 flex-col justify-center gap-2.5">
-              {breakdown.map((item) => (
+        <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-1 lg:row-start-1")}>
+          <CardContent className="grid h-full min-h-0 grid-cols-[minmax(390px,0.42fr)_minmax(0,1fr)] items-center gap-3 p-2">
+            <AnalysisPrioritySummary
+              priorityScore={priorityScore}
+              priorityStatus={priorityStatus}
+              compact
+            />
+            <div className="flex min-h-0 flex-col justify-center gap-2">
+              {breakdown.slice(0, 4).map((item) => (
                 <DashboardScoreBar
                   key={item.key}
                   scoreKey={item.key}
                   label={item.label}
                   value={item.value}
                   color={item.color}
+                  compact
                 />
               ))}
             </div>
@@ -3348,6 +3327,101 @@ function AnalysisDashboard({
         </Card>
       </div>
 
+    </div>
+  );
+}
+
+function AnalysisPrioritySummary({
+  priorityScore,
+  priorityStatus,
+  compact = false,
+}: {
+  priorityScore: number;
+  priorityStatus: ReturnType<typeof priorityState>;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "relative flex min-h-0 flex-col justify-between overflow-hidden rounded-2xl bg-muted/35",
+        compact ? "h-full p-3" : "p-5",
+      )}
+      style={{
+        backgroundColor: priorityStatus.critical
+          ? "color-mix(in oklab, var(--destructive) 12%, var(--card))"
+          : "color-mix(in oklab, var(--muted) 70%, var(--card))",
+      }}
+    >
+      <Badge
+        variant="secondary"
+        className={cn(
+          "absolute z-10 rounded-full px-3.5 py-1.5 text-sm font-semibold",
+          compact ? "right-3 top-3" : "right-5 top-5",
+        )}
+        style={{ color: scoreRiskColor(priorityScore) }}
+      >
+        {priorityStatus.critical ? <TriangleAlert className="size-4" /> : null}
+        {priorityStatus.label}
+      </Badge>
+      <div className="flex min-h-0 flex-1 items-center">
+        <ScoreGauge
+          label="Intervention priority"
+          value={priorityScore}
+          size={compact ? "medium" : "large"}
+        />
+      </div>
+    </div>
+  );
+}
+
+function AnalysisRecommendationPanel({
+  className,
+  items,
+  onExport,
+}: {
+  className?: string;
+  items: string[];
+  onExport: () => void;
+}) {
+  return (
+    <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/75 p-4", className)}>
+      <div className="flex shrink-0 items-center gap-3">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Lightbulb className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <div className="truncate text-base font-semibold">
+            Recommendation
+          </div>
+        </div>
+      </div>
+
+      <ScrollArea className="mt-3 min-h-0 flex-1">
+        <ul className="flex flex-col gap-2.5 pr-3 text-sm leading-5 text-muted-foreground">
+          {items.map((item, index) => (
+            <li
+              key={item}
+              className="grid grid-cols-[1.55rem_minmax(0,1fr)] gap-2.5 rounded-xl bg-muted/35 px-3 py-2.5"
+            >
+              <span className="flex size-6 items-center justify-center rounded-full bg-background text-xs font-semibold text-foreground ring-1 ring-border/60">
+                {index + 1}
+              </span>
+              <span className="pt-1">{item}</span>
+            </li>
+          ))}
+        </ul>
+      </ScrollArea>
+
+      <Button
+        type="button"
+        size="default"
+        variant="secondary"
+        className="mt-3 w-fit px-4"
+        onClick={onExport}
+      >
+        <FileText data-icon="inline-start" />
+        Export report
+      </Button>
     </div>
   );
 }
@@ -3495,6 +3569,10 @@ function buildAnalysisDashboardContext({
       ? {
           h3_id: analysisText(properties, "h3_id", "selected H3"),
           municipality: analysisText(properties, "municipality_name", "Unknown"),
+          selected_coordinate: {
+            longitude: selectedFeature.coordinate[0],
+            latitude: selectedFeature.coordinate[1],
+          },
         }
       : {
           area: "Milan metropolitan citywide dashboard",
@@ -3569,23 +3647,42 @@ function DashboardScoreBar({
   label,
   value,
   color,
+  compact = false,
 }: {
   scoreKey: string;
   label: string;
   value: number;
   color: string;
+  compact?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[11rem_minmax(0,1fr)_3rem] items-center gap-3 text-sm">
-      <span className="flex min-w-0 items-center gap-2 truncate text-muted-foreground">
+    <div
+      className={cn(
+        "grid items-center gap-3 text-sm",
+        compact
+          ? "grid-cols-[16rem_minmax(0,1fr)_2.5rem]"
+          : "grid-cols-[11rem_minmax(0,1fr)_3rem]",
+      )}
+    >
+      <span
+        className={cn(
+          "flex min-w-0 items-center gap-2 text-muted-foreground",
+          compact ? "whitespace-nowrap" : "truncate",
+        )}
+      >
         <span
-          className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted"
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-lg bg-muted",
+            compact ? "size-6" : "size-7",
+          )}
           style={{ color }}
           aria-hidden="true"
         >
           <ScoreBreakdownIcon scoreKey={scoreKey} />
         </span>
-        <span className="truncate">{label}</span>
+        <span className={compact ? "whitespace-nowrap" : "truncate"}>
+          {label}
+        </span>
       </span>
       <div className="h-1.5 rounded-full bg-muted">
         <div
@@ -3654,25 +3751,26 @@ function ScoreGauge({
 }: {
   label: string;
   value: number;
-  size?: "large" | "compact";
+  size?: "large" | "medium" | "compact";
 }) {
   const boundedValue = Math.max(0, Math.min(100, value));
   const color = scoreRiskColor(boundedValue);
   const isLarge = size === "large";
+  const isMedium = size === "medium";
 
   if (isLarge) {
     return (
-      <div className="grid w-full min-w-0 grid-cols-[112px_minmax(9.5rem,1fr)] items-center gap-4 overflow-hidden">
+      <div className="grid w-full min-w-0 grid-cols-[104px_minmax(7.25rem,1fr)] items-center gap-3 overflow-visible">
         <svg
           viewBox="0 0 120 78"
-          className="h-24 w-28"
+          className="h-24 w-[6.5rem]"
           aria-hidden="true"
         >
           <path
             d="M18 64A42 42 0 0 1 102 64"
             fill="none"
             stroke="currentColor"
-            strokeLinecap="round"
+            strokeLinecap="butt"
             strokeWidth="12"
             className="text-muted"
             pathLength={100}
@@ -3696,19 +3794,73 @@ function ScoreGauge({
             strokeWidth="4"
             transform={`rotate(${-90 + boundedValue * 1.8} 60 64)`}
           />
-          <circle cx="60" cy="64" r="4" fill={color} />
         </svg>
-        <div className="min-w-[9.5rem] justify-self-end">
+        <div className="min-w-[7.25rem] justify-self-end">
           <div
-            className="flex w-[9.5rem] items-baseline justify-end whitespace-nowrap leading-none tabular-nums"
+            className="flex w-[7.25rem] items-baseline justify-end whitespace-nowrap leading-none tabular-nums"
             style={{ color }}
           >
-            <span className="inline-block w-[6.2rem] text-right text-[clamp(2.5rem,3.4vw,3.1rem)] font-semibold">
+            <span className="inline-block text-right text-[clamp(2.5rem,3.4vw,3.1rem)] font-semibold">
               {Math.round(boundedValue)}
             </span>
-            <span className="ml-1 inline-block w-11 shrink-0 text-left text-base font-semibold">/100</span>
+            <span className="ml-1 inline-block shrink-0 text-left text-base font-semibold">/100</span>
           </div>
-          <div className="mt-1 truncate text-right text-xs text-muted-foreground">
+          <div className="mt-1 whitespace-nowrap text-right text-xs text-muted-foreground">
+            {label}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isMedium) {
+    return (
+      <div className="grid w-full min-w-0 grid-cols-[minmax(148px,0.9fr)_minmax(7.25rem,1fr)] items-center gap-3 overflow-visible">
+        <svg
+          viewBox="0 0 120 78"
+          className="h-36 w-44"
+          aria-hidden="true"
+        >
+          <path
+            d="M18 64A42 42 0 0 1 102 64"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="butt"
+            strokeWidth="12"
+            className="text-muted"
+            pathLength={100}
+          />
+          <path
+            d="M18 64A42 42 0 0 1 102 64"
+            fill="none"
+            stroke={color}
+            strokeLinecap="round"
+            strokeWidth="12"
+            pathLength={100}
+            strokeDasharray={`${boundedValue} ${100 - boundedValue}`}
+          />
+          <line
+            x1="60"
+            y1="64"
+            x2="60"
+            y2="34"
+            stroke={color}
+            strokeLinecap="round"
+            strokeWidth="4"
+            transform={`rotate(${-90 + boundedValue * 1.8} 60 64)`}
+          />
+        </svg>
+        <div className="min-w-[7.25rem] justify-self-end">
+          <div
+            className="flex w-[7.25rem] items-baseline justify-end whitespace-nowrap leading-none tabular-nums"
+            style={{ color }}
+          >
+            <span className="inline-block text-right text-[3.35rem] font-semibold">
+              {Math.round(boundedValue)}
+            </span>
+            <span className="ml-1 inline-block shrink-0 text-left text-base font-semibold">/100</span>
+          </div>
+          <div className="mt-1 whitespace-nowrap text-right text-xs text-muted-foreground">
             {label}
           </div>
         </div>
@@ -3727,7 +3879,7 @@ function ScoreGauge({
           d="M18 64A42 42 0 0 1 102 64"
           fill="none"
           stroke="currentColor"
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeWidth="12"
           className="text-muted"
           pathLength={100}
@@ -3741,7 +3893,6 @@ function ScoreGauge({
           pathLength={100}
           strokeDasharray={`${boundedValue} ${100 - boundedValue}`}
         />
-        <circle cx="60" cy="64" r="4" fill={color} />
       </svg>
       <div className="min-w-0">
         <div
@@ -3757,64 +3908,19 @@ function ScoreGauge({
   );
 }
 
-function AnalysisFloatingChat({
-  dashboardContext,
-  llmSettings,
-}: {
-  dashboardContext: ReturnType<typeof buildAnalysisDashboardContext>;
-  llmSettings: LlmSettings;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const canAsk =
-    llmSettings.enabled &&
-    llmSettings.baseUrl.trim() &&
-    llmSettings.model.trim();
-
-  return (
-    <div
-      className="absolute right-4 top-4 z-30 flex max-w-[calc(100%-2rem)] flex-col items-end gap-2"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <Button
-        type="button"
-        variant="secondary"
-        className="h-10 rounded-full bg-background/85 px-3 shadow-lg ring-1 ring-border/60 backdrop-blur-md"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <BrainCircuit data-icon="inline-start" />
-        Analysis chat
-        <Badge
-          variant={canAsk ? "secondary" : "outline"}
-          className="ml-1 h-5 rounded-full px-2 text-[11px]"
-        >
-          {canAsk ? "Ready" : "Off"}
-        </Badge>
-      </Button>
-
-      {open ? (
-        <AnalysisChatBox
-          className="h-[min(640px,calc(100vh-8rem))] w-[min(680px,calc(100vw-2rem))] shadow-2xl"
-          dashboardContext={dashboardContext}
-          llmSettings={llmSettings}
-          onClose={() => setOpen(false)}
-        />
-      ) : null}
-    </div>
-  );
-}
-
 function AnalysisChatBox({
   className,
   dashboardContext,
   llmSettings,
-  onClose,
 }: {
   className?: string;
   dashboardContext: ReturnType<typeof buildAnalysisDashboardContext>;
   llmSettings: LlmSettings;
-  onClose?: () => void;
 }) {
-  const [prompt, setPrompt] = React.useState(ANALYSIS_PRESET_QUESTIONS[0]);
+  const [prompt, setPrompt] = React.useState("");
+  const [activePreset, setActivePreset] = React.useState<string>("");
+  const [showPresets, setShowPresets] = React.useState(false);
+  const promptRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = React.useState<AnalysisChatMessage[]>([
     {
       role: "assistant",
@@ -3831,6 +3937,22 @@ function AnalysisChatBox({
     llmSettings.enabled &&
     llmSettings.baseUrl.trim() &&
     llmSettings.model.trim();
+  const activeModel =
+    llmSettings.provider === DEFAULT_LLM_SETTINGS.provider &&
+    (llmSettings.model.trim() || DEFAULT_LLM_SETTINGS.model) ===
+      DEFAULT_LLM_SETTINGS.model
+      ? "Default"
+      : llmSettings.model.trim() || DEFAULT_LLM_SETTINGS.model;
+  const isStreamingAnswerVisible =
+    state.status === "loading" &&
+    messages[messages.length - 1]?.role === "assistant";
+
+  const choosePreset = React.useCallback((preset: string) => {
+    setActivePreset(preset);
+    setPrompt(preset);
+    setShowPresets(false);
+    window.requestAnimationFrame(() => promptRef.current?.focus());
+  }, []);
 
   const askAssistant = React.useCallback(
     async (question: string) => {
@@ -3842,6 +3964,8 @@ function AnalysisChatBox({
         ...current,
         { role: "user", content: trimmedQuestion },
       ]);
+      setActivePreset("");
+      setShowPresets(false);
       setPrompt("");
 
       try {
@@ -3852,19 +3976,56 @@ function AnalysisChatBox({
             ...llmSettings,
             question: trimmedQuestion,
             context: dashboardContext,
+            stream: true,
           }),
         });
-        const data = (await response.json()) as AnalysisInterpretResponse;
 
-        if (!response.ok || !data.answer) {
-          throw new Error(data.error ?? "AI explanation failed");
+        if (!response.ok) {
+          const data = (await response.json().catch(() => null)) as
+            | AnalysisInterpretResponse
+            | null;
+          throw new Error(data?.error ?? "AI explanation failed");
         }
 
-        setState({ status: "success", answer: data.answer, error: null });
-        setMessages((current) => [
-          ...current,
-          { role: "assistant", content: data.answer ?? "" },
-        ]);
+        if (!response.body) {
+          const data = (await response.json()) as AnalysisInterpretResponse;
+          if (!data.answer) throw new Error(data.error ?? "AI explanation failed");
+          setState({ status: "success", answer: data.answer, error: null });
+          setMessages((current) => [
+            ...current,
+            { role: "assistant", content: data.answer ?? "" },
+          ]);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let answer = "";
+
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          if (!chunk) continue;
+          answer += chunk;
+          const visibleAnswer = answer;
+          setMessages((current) => {
+            const next = [...current];
+            if (next[next.length - 1]?.role === "assistant") {
+              next[next.length - 1] = {
+                role: "assistant",
+                content: visibleAnswer,
+              };
+            } else {
+              next.push({ role: "assistant", content: visibleAnswer });
+            }
+            return next;
+          });
+        }
+
+        answer += decoder.decode();
+        if (!answer.trim()) throw new Error("AI explanation failed");
+        setState({ status: "success", answer, error: null });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "AI explanation failed";
@@ -3881,131 +4042,243 @@ function AnalysisChatBox({
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/90 p-3 shadow-sm ring-1 ring-border/50 backdrop-blur",
+        "flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/95 p-4 shadow-sm ring-1 ring-border/50 backdrop-blur",
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-            <BrainCircuit className="size-5" />
-          </span>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">Analysis chatbot</div>
-            <div className="truncate text-xs text-muted-foreground">
-              Ask the selected evidence
-            </div>
-          </div>
-        </div>
-        <Badge variant={canAsk ? "secondary" : "outline"}>
-          {canAsk ? "Ready" : "Off"}
-        </Badge>
-        {onClose ? (
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className="size-8"
-            onClick={onClose}
-          >
-            <X />
-            <span className="sr-only">Close analysis chat</span>
-          </Button>
-        ) : null}
-      </div>
-
-      <ScrollArea className="mt-3 min-h-0 flex-1 rounded-xl bg-muted/35">
-        <div className="flex flex-col gap-3 p-3">
-          {messages.slice(-5).map((message, index) => (
+      <ScrollArea className="min-h-0 flex-1 overflow-x-hidden rounded-2xl bg-muted/25">
+        <div className="flex min-w-0 flex-col gap-5 p-4">
+          {messages.slice(-6).map((message, index) => (
             <div
               key={`${message.role}-${index}`}
               className={cn(
-                "max-w-[94%] rounded-xl px-4 py-3 text-sm leading-6",
-                message.role === "user"
-                  ? "self-end bg-primary text-primary-foreground"
-                  : "self-start bg-background/80 text-foreground",
+                "flex w-full min-w-0 max-w-full gap-2",
+                message.role === "user" ? "justify-end" : "justify-start",
               )}
             >
-              <ChatMessageContent content={message.content} />
+              {message.role === "assistant" ? (
+                <Avatar className="mt-0.5 size-7 rounded-lg">
+                  <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
+                    <Bot />
+                  </AvatarFallback>
+                </Avatar>
+              ) : null}
+              <div
+                className={cn(
+                  "w-full min-w-0 overflow-hidden rounded-2xl px-4 py-3 text-sm leading-6 break-words",
+                  message.role === "user"
+                    ? "max-w-[82%] bg-primary text-primary-foreground"
+                    : "max-w-[calc(100%-2.75rem)] bg-background/95 text-foreground shadow-sm ring-1 ring-border/40",
+                )}
+              >
+                <ChatMessageContent
+                  content={message.content}
+                  muted={message.role === "user"}
+                />
+              </div>
             </div>
           ))}
-          {state.status === "loading" ? (
-            <div className="self-start rounded-xl bg-background/80 px-4 py-3 text-sm text-muted-foreground">
-              Reading dashboard evidence...
+          {state.status === "loading" && !isStreamingAnswerVisible ? (
+            <div className="flex justify-start gap-2">
+              <Avatar className="mt-0.5 size-7 rounded-lg">
+                <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
+                  <Bot />
+                </AvatarFallback>
+              </Avatar>
+              <ThinkingIndicator />
             </div>
           ) : null}
         </div>
       </ScrollArea>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {ANALYSIS_PRESET_QUESTIONS.slice(0, 3).map((preset) => (
-          <Button
-            key={preset}
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="h-8 max-w-full truncate px-3 text-xs"
-            onClick={() => setPrompt(preset)}
-          >
-            {preset}
-          </Button>
-        ))}
-      </div>
-
-      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-        <Textarea
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          placeholder={
-            canAsk
-              ? "Ask about this hotspot..."
-              : "Enable AI and set a model in Settings."
-          }
-          className="min-h-9 resize-none text-sm"
-          disabled={!canAsk}
-        />
+      <div className="mt-3 overflow-hidden rounded-2xl bg-background/90 shadow-sm ring-1 ring-border/50">
         <Button
           type="button"
-          size="icon"
-          onClick={() => askAssistant(prompt)}
-          disabled={!canAsk || state.status === "loading" || !prompt.trim()}
+          variant="ghost"
+          className="h-10 w-full justify-between rounded-none px-3 text-sm font-medium"
+          aria-expanded={showPresets}
+          onClick={() => setShowPresets((open) => !open)}
         >
-          <SendHorizontal />
-          <span className="sr-only">Ask analysis chat</span>
+          <span>Recommended questions</span>
+          <ChevronDown
+            className={cn(
+              "size-4 transition-transform",
+              showPresets && "rotate-180",
+            )}
+          />
         </Button>
+        {showPresets ? (
+          <div className="grid gap-1.5 border-t p-2">
+            {ANALYSIS_PRESET_QUESTIONS.slice(0, 4).map((preset) => (
+              <Button
+                key={preset}
+                type="button"
+                size="sm"
+                variant={activePreset === preset ? "default" : "secondary"}
+                className="h-auto min-h-9 w-full justify-start rounded-xl px-3 py-2 text-left text-xs leading-5 whitespace-normal"
+                onClick={() => choosePreset(preset)}
+              >
+                {preset}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex min-h-[104px] flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60">
+        <div className="min-h-0 flex-1">
+          <Textarea
+            ref={promptRef}
+            value={prompt}
+            onChange={(event) => {
+              setPrompt(event.target.value);
+              setActivePreset("");
+            }}
+            placeholder={
+              canAsk
+                ? "Ask about this hotspot..."
+                : "Enable AI and set a model in Settings."
+            }
+            className="min-h-[52px] resize-none border-0 bg-transparent p-3 text-sm shadow-none focus-visible:ring-0"
+            disabled={!canAsk}
+          />
+        </div>
+        <div className="flex min-h-11 items-center gap-2 border-t px-3 py-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 max-w-[12rem] rounded-full px-2.5 text-[11px] font-medium text-muted-foreground"
+              >
+                <span className="truncate">{activeModel}</span>
+                <ChevronDown className="size-3.5" />
+                <span className="sr-only">Active model</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel>Active model</DropdownMenuLabel>
+              <div className="px-1.5 py-1">
+                <div className="rounded-md bg-muted/60 px-2.5 py-2">
+                  <div className="truncate text-sm font-medium text-foreground">
+                    {activeModel}
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-muted-foreground">
+                    Configured in Settings
+                  </div>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs leading-5 text-muted-foreground">
+                Provider: {llmSettings.provider || DEFAULT_LLM_SETTINGS.provider}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="ml-auto flex items-center">
+            <Button
+              type="button"
+              size="icon"
+              className="rounded-full"
+              onClick={() => askAssistant(prompt)}
+              disabled={!canAsk || state.status === "loading" || !prompt.trim()}
+            >
+              <SendHorizontal />
+              <span className="sr-only">Ask analysis chat</span>
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-function ChatMessageContent({ content }: { content: string }) {
+function ThinkingIndicator() {
+  return (
+    <div className="max-w-[calc(100%-2.75rem)] rounded-2xl bg-background/95 px-4 py-3 text-sm shadow-sm ring-1 ring-border/40">
+      <div className="flex items-center gap-3 text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <ChevronDown className="animate-pulse" />
+          <span className="font-medium text-foreground">Thinking</span>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-1.5">
+        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:0ms]" />
+        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:120ms]" />
+        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/50 [animation-delay:240ms]" />
+      </div>
+    </div>
+  );
+}
+
+function ChatMessageContent({
+  content,
+  muted = false,
+}: {
+  content: string;
+  muted?: boolean;
+}) {
   const blocks = parseChatMarkdown(content);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden">
       {blocks.map((block, index) => {
         if (block.type === "list") {
+          if (block.ordered) {
+            return (
+              <ol
+                key={index}
+                className={cn(
+                  "flex list-decimal flex-col gap-2 pl-5 text-[13px] leading-6 font-normal text-foreground/80 marker:text-muted-foreground",
+                  muted && "text-primary-foreground/90 marker:text-primary-foreground/70",
+                )}
+              >
+                {block.items.map((item, itemIndex) => (
+                  <li key={itemIndex} className="pl-1">
+                    {renderInlineMarkdown(item, muted)}
+                  </li>
+                ))}
+              </ol>
+            );
+          }
+
           return (
-            <ul key={index} className="flex flex-col gap-2">
+            <ul
+              key={index}
+              className={cn(
+                "flex flex-col gap-2 text-[13px] leading-6 font-normal text-foreground/80",
+                muted && "text-primary-foreground/90",
+              )}
+            >
               {block.items.map((item, itemIndex) => (
                 <li key={itemIndex} className="flex gap-2">
-                  <CheckCircle2 className="mt-1 size-3.5 shrink-0 text-primary" />
-                  <span>{renderInlineMarkdown(item)}</span>
+                  <CheckCircle2
+                    className={cn(
+                      "mt-1 size-3.5 shrink-0 text-primary",
+                      muted && "text-primary-foreground",
+                    )}
+                  />
+                  <span>{renderInlineMarkdown(item, muted)}</span>
                 </li>
               ))}
             </ul>
           );
         }
 
+        if (block.type === "table") {
+          return <AnalysisMarkdownTable key={index} block={block} muted={muted} />;
+        }
+
         return (
           <p
             key={index}
             className={cn(
-              "whitespace-pre-wrap",
-              block.emphasis ? "font-medium text-foreground" : "text-foreground/90",
+              "whitespace-pre-wrap break-words text-[13px] leading-6 font-normal text-foreground/80",
+              block.emphasis && "text-foreground/90",
+              muted && "text-primary-foreground/90",
             )}
           >
-            {renderInlineMarkdown(block.text)}
+            {renderParagraphMarkdown(block.text, muted)}
           </p>
         );
       })}
@@ -4013,72 +4286,257 @@ function ChatMessageContent({ content }: { content: string }) {
   );
 }
 
-type ChatMarkdownBlock =
-  | { type: "paragraph"; text: string; emphasis?: boolean }
-  | { type: "list"; items: string[] };
+function AnalysisMarkdownTable({
+  block,
+  muted = false,
+}: {
+  block: ChatMarkdownTableBlock;
+  muted?: boolean;
+}) {
+  return (
+    <Dialog>
+      <DraggableTableScroll
+        muted={muted}
+        action={
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="ghost"
+              className="rounded-md text-muted-foreground hover:text-foreground"
+              aria-label="Expand table"
+              data-analysis-table-expand
+            >
+              <Maximize2 />
+            </Button>
+          </DialogTrigger>
+        }
+      >
+        <AnalysisTableRail block={block} muted={muted} />
+      </DraggableTableScroll>
 
-function parseChatMarkdown(content: string): ChatMarkdownBlock[] {
-  const normalized = content
-    .replace(/\r\n/g, "\n")
-    .replace(/\s+#{1,4}\s+/g, "\n")
-    .replace(/(\S)\s+(\d+[.)])\s+/g, "$1\n$2 ")
-    .replace(/(\S)\s+\*\s+/g, "$1\n* ");
-  const lines = normalized.split("\n");
-  const blocks: ChatMarkdownBlock[] = [];
-  let paragraph: string[] = [];
-  let listItems: string[] = [];
-
-  const flushParagraph = () => {
-    const text = paragraph
-      .join(" ")
-      .replace(/^#{1,4}\s+/, "")
-      .trim();
-    if (text) {
-      blocks.push({
-        type: "paragraph",
-        text,
-        emphasis: /^(\*\*)?[\w\s/-]+:/.test(text),
-      });
-    }
-    paragraph = [];
-  };
-  const flushList = () => {
-    if (listItems.length) blocks.push({ type: "list", items: listItems });
-    listItems = [];
-  };
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    if (!line) {
-      flushParagraph();
-      flushList();
-      continue;
-    }
-
-    const listMatch = line.match(/^(?:[-*]|\d+[.)])\s+(.+)$/);
-    if (listMatch) {
-      flushParagraph();
-      listItems.push(listMatch[1].trim());
-      continue;
-    }
-
-    flushList();
-    paragraph.push(line);
-  }
-
-  flushParagraph();
-  flushList();
-
-  return blocks.length ? blocks : [{ type: "paragraph", text: content }];
+      <DialogContent
+        className="grid max-h-[min(42rem,calc(100vh-2rem))] max-w-[min(72rem,calc(100vw-2rem))] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-[min(72rem,calc(100vw-2rem))]"
+      >
+        <DialogHeader className="border-b px-4 py-3 pr-12">
+          <DialogTitle>Table</DialogTitle>
+          <DialogDescription className="sr-only">
+            Full table content
+          </DialogDescription>
+        </DialogHeader>
+        <div className="min-h-0 p-3">
+          <DraggableTableScroll
+            muted={muted}
+            viewportClassName="max-h-full"
+          >
+            <AnalysisTableRail block={block} muted={muted} />
+          </DraggableTableScroll>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-function renderInlineMarkdown(text: string) {
+function AnalysisTableRail({
+  block,
+  muted = false,
+}: {
+  block: ChatMarkdownTableBlock;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      data-analysis-table-rail
+      role="table"
+      aria-label="Analysis answer table"
+      className="grid w-max min-w-full overflow-hidden text-xs leading-5"
+      style={{
+        gridTemplateColumns: `repeat(${block.headers.length}, minmax(10rem, 14rem))`,
+      }}
+    >
+      {block.headers.map((header, headerIndex) => (
+        <div
+          key={`header-${headerIndex}`}
+          role="columnheader"
+          className={cn(
+            "sticky top-0 z-10 min-w-0 border-b border-border/70 bg-muted/60 px-3 py-2 font-semibold text-foreground break-words",
+            headerIndex > 0 && "border-l border-border/60",
+            muted && "border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground",
+            tableAlignmentClass(block.alignments[headerIndex]),
+          )}
+        >
+          {renderInlineMarkdown(header, muted)}
+        </div>
+      ))}
+
+      {block.rows.map((row, rowIndex) =>
+        block.headers.map((_, cellIndex) => (
+          <div
+            key={`row-${rowIndex}-cell-${cellIndex}`}
+            data-analysis-table-cell
+            role="cell"
+            className={cn(
+              "min-w-0 border-t border-border/50 px-3 py-3 align-top break-words",
+              cellIndex > 0 && "border-l border-border/50",
+              rowIndex % 2 === 1 && "bg-muted/25",
+              muted && "border-primary-foreground/20",
+              muted && rowIndex % 2 === 1 && "bg-primary-foreground/10",
+              tableAlignmentClass(block.alignments[cellIndex]),
+            )}
+          >
+            {renderInlineMarkdown(row[cellIndex] ?? "", muted)}
+          </div>
+        )),
+      )}
+    </div>
+  );
+}
+
+function DraggableTableScroll({
+  children,
+  muted = false,
+  action,
+  viewportClassName,
+}: {
+  children: React.ReactNode;
+  muted?: boolean;
+  action?: React.ReactNode;
+  viewportClassName?: string;
+}) {
+  const scrollerRef = React.useRef<HTMLDivElement | null>(null);
+  const dragStateRef = React.useRef<{
+    active: boolean;
+    pointerId: number | null;
+    startX: number;
+    scrollLeft: number;
+  }>({
+    active: false,
+    pointerId: null,
+    startX: 0,
+    scrollLeft: 0,
+  });
+
+  const endDrag = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const scroller = scrollerRef.current;
+    if (
+      scroller &&
+      dragStateRef.current.pointerId !== null &&
+      scroller.hasPointerCapture(dragStateRef.current.pointerId)
+    ) {
+      scroller.releasePointerCapture(dragStateRef.current.pointerId);
+    }
+    dragStateRef.current.active = false;
+    dragStateRef.current.pointerId = null;
+    event.currentTarget.dataset.dragging = "false";
+  }, []);
+
+  return (
+    <div
+      data-analysis-table-shell
+      className={cn(
+        "grid w-full min-w-0 max-w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl ring-1 ring-border/60",
+        muted && "ring-primary-foreground/30",
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center justify-between border-b border-border/60 bg-muted/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground",
+          muted && "border-primary-foreground/25 bg-primary-foreground/10 text-primary-foreground/80",
+        )}
+      >
+        <span>Table</span>
+        {action ? <div className="flex shrink-0 items-center">{action}</div> : null}
+      </div>
+      <div
+        ref={scrollerRef}
+        data-analysis-table-viewport
+        data-analysis-table-scroll
+        role="region"
+        tabIndex={0}
+        aria-label="Scrollable table"
+        className={cn(
+          "max-h-[min(24rem,56vh)] w-full min-w-0 max-w-full overflow-auto overscroll-contain",
+          "cursor-grab active:cursor-grabbing select-none touch-pan-x touch-pan-y",
+          "[scrollbar-gutter:stable] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-muted/60",
+          muted && "[&::-webkit-scrollbar-thumb]:bg-primary-foreground/50 [&::-webkit-scrollbar-track]:bg-primary-foreground/15",
+          viewportClassName,
+        )}
+        onPointerDown={(event) => {
+          if (event.button !== 0) return;
+          const scroller = event.currentTarget;
+          dragStateRef.current = {
+            active: true,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            scrollLeft: scroller.scrollLeft,
+          };
+          scroller.setPointerCapture(event.pointerId);
+          scroller.dataset.dragging = "true";
+        }}
+        onPointerMove={(event) => {
+          const state = dragStateRef.current;
+          if (!state.active || state.pointerId !== event.pointerId) return;
+          event.preventDefault();
+          event.currentTarget.scrollLeft = state.scrollLeft - (event.clientX - state.startX);
+        }}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={(event) => {
+          if (dragStateRef.current.active) endDrag(event);
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function tableAlignmentClass(alignment: "left" | "center" | "right") {
+  if (alignment === "center") return "text-center";
+  if (alignment === "right") return "text-right";
+  return "text-left";
+}
+
+function renderParagraphMarkdown(text: string, muted = false) {
+  const labelMatch =
+    text.match(/^\*\*([^*]{2,96}:)\*\*\s*(.*)$/) ??
+    text.match(/^([^:]{2,96}:)\s+(.+)$/);
+
+  if (labelMatch) {
+    const label = labelMatch[1];
+    const body = labelMatch[2] ?? "";
+
+    return (
+      <>
+        <strong
+          className={cn(
+            "font-semibold text-foreground",
+            muted && "text-primary-foreground",
+          )}
+        >
+          {label}
+        </strong>
+        {body ? <> {renderInlineMarkdown(body, muted)}</> : null}
+      </>
+    );
+  }
+
+  return renderInlineMarkdown(text, muted);
+}
+
+function renderInlineMarkdown(text: string, muted = false) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
 
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
-        <strong key={index} className="font-semibold text-foreground">
+        <strong
+          key={index}
+          className={cn(
+            "font-semibold text-foreground",
+            muted && "text-primary-foreground",
+          )}
+        >
           {part.slice(2, -2)}
         </strong>
       );
@@ -4703,6 +5161,7 @@ function MilanMapCanvas({
   opacities,
   basemap,
   llmSettings,
+  analysisPanelMode,
   layerPanelOpen,
   detailOpen,
   selectedLayer,
@@ -4723,6 +5182,7 @@ function MilanMapCanvas({
   opacities: Record<string, number>;
   basemap: BasemapId;
   llmSettings: LlmSettings;
+  analysisPanelMode: AnalysisPanelMode;
   layerPanelOpen: boolean;
   detailOpen: boolean;
   selectedLayer: PublicMilanLayer | null;
@@ -4756,6 +5216,7 @@ function MilanMapCanvas({
         groups={groups}
         theme={theme}
         llmSettings={llmSettings}
+        panelMode={analysisPanelMode}
       />
     );
   }
@@ -4841,6 +5302,8 @@ export function MilanLayerViewer({ groups }: MilanLayerViewerProps) {
   const [llmSettings, setLlmSettingsState] = React.useState<LlmSettings>(
     readStoredLlmSettings,
   );
+  const [analysisPanelMode, setAnalysisPanelMode] =
+    React.useState<AnalysisPanelMode>("summary");
   const [activeLayerIds, setActiveLayerIds] = React.useState<Set<string>>(
     () => defaultActiveLayersForFunction("ai-agent"),
   );
@@ -4928,7 +5391,33 @@ export function MilanLayerViewer({ groups }: MilanLayerViewerProps) {
           onLlmSettingsChange={changeLlmSettings}
         />
         <main className="flex min-w-0 flex-1 flex-col">
-          <MainDirectoryHeader activeFunction={activeFunction} />
+          <MainDirectoryHeader
+            activeFunction={activeFunction}
+            action={
+              activeFunction.id === "ai-agent" &&
+              activeLayerIds.has("analysis-dashboard") &&
+              llmSettings.enabled ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={cn(
+                    "rounded-full border-border/70 bg-background/70 px-3 text-foreground shadow-none backdrop-blur hover:bg-muted/80",
+                    analysisPanelMode === "chat" &&
+                      "bg-muted text-foreground ring-1 ring-border/70",
+                  )}
+                  onClick={() =>
+                    setAnalysisPanelMode((mode) =>
+                      mode === "chat" ? "summary" : "chat",
+                    )
+                  }
+                >
+                  <Bot data-icon="inline-start" />
+                  Ask AI
+                </Button>
+              ) : null
+            }
+          />
           <div className="min-h-0 flex-1">
             <MilanMapCanvas
               theme={theme}
@@ -4939,6 +5428,7 @@ export function MilanLayerViewer({ groups }: MilanLayerViewerProps) {
               opacities={opacities}
               basemap={basemap}
               llmSettings={llmSettings}
+              analysisPanelMode={analysisPanelMode}
               layerPanelOpen={layerPanelOpen}
               detailOpen={detailOpen}
               selectedLayer={selectedLayer}

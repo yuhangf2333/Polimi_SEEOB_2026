@@ -19,8 +19,12 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const baseUrl = payload.baseUrl?.trim() || process.env.LLM_BASE_URL?.trim();
-  const apiKey = payload.apiKey?.trim() || process.env.LLM_API_KEY?.trim();
+  const clientApiKey = payload.apiKey?.trim();
+  const useServerCredential = !clientApiKey;
+  const baseUrl = useServerCredential
+    ? process.env.LLM_BASE_URL?.trim() || payload.baseUrl?.trim()
+    : payload.baseUrl?.trim();
+  const apiKey = clientApiKey || process.env.LLM_API_KEY?.trim();
 
   if (!baseUrl || !apiKey) {
     return Response.json(

@@ -49,5 +49,5 @@ export const DEFAULT_LLM_SETTINGS: LlmSettings = {
   baseUrl: "https://token-plan-cn.xiaomimimo.com/v1",
   apiKey: "",
   model: "mimo-v2-omni",
-  temperature: 0.1,
+  temperature: 0.2,
 };

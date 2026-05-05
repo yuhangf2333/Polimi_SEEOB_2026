@@ -1,0 +1,4 @@
+h3_res9,service_key,line,mode,operator,dependency_weight,grid_count,stop_count,mean_total_access_time_min,mean_walk_time_min,mean_wait_min,total_freq_per_hour,route_dependency_share,route_rank_in_h3
+891f99564c7ffff,tram:atm:27:11709,27,tram,ATM S.p.a. / AMAT / Comune di Milano,28.624,9,3,9.784,5.284,4.5,72.0,0.1428,1.0
+891f99564c7ffff,metro:atm:4:100164,4,metro,ATM S.p.a. / AMAT / Comune di Milano,25.648,9,2,10.964,9.214,1.75,270.0,0.1279,2.0
+891f9824903ffff,bus:netex:Z556,Z556,bus,Consorzio Autoservizi Lombardi,5.18,9,1,43.6,11.6,32.0,9.0,0.3347,1.0
