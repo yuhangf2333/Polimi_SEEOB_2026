@@ -5,6 +5,7 @@ import type {
   CircleLayerSpecification,
   FillLayerSpecification,
   FilterSpecification,
+  LineLayerSpecification,
   MapLayerMouseEvent,
   StyleSpecification,
 } from "maplibre-gl";
@@ -50,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Map as GeoMap, useMap } from "@/components/ui/map";
+import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,6 +103,7 @@ type BasemapStyles = {
 
 type SelectedFeature = {
   layer: PublicMilanLayer;
+  featureId: string | number | null;
   properties: GeoJSON.GeoJsonProperties;
   coordinate: [number, number];
 };
@@ -205,6 +208,7 @@ const GOOGLE_MAPS_EMBED_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY;
 
 const LLM_SETTINGS_STORAGE_KEY = "milan-gis-llm-settings";
+const LARGE_SURFACE_TILE_BUFFER = 32;
 
 const DEFAULT_VISIBLE_LAYER_IDS: Record<PrimaryFunctionId, string[]> = {
   ptal: ["ptal-public-transport-accessibility-level"],
@@ -1986,15 +1990,18 @@ function GeoJsonLayer({
   opacity,
   material,
   contrast,
+  selectedFeature,
   onFeatureSelect,
 }: {
   layer: PublicMilanLayer;
   opacity: number;
   material: LayerMaterial;
   contrast: number;
+  selectedFeature: SelectedFeature | null;
   onFeatureSelect: (feature: SelectedFeature) => void;
 }) {
   const { map, isLoaded } = useMap();
+  const selectedFeatureIdRef = React.useRef<string | number | null>(null);
 
   React.useEffect(() => {
     if (!map || !isLoaded) return;
@@ -2018,31 +2025,14 @@ function GeoJsonLayer({
       (layer.group === "ptal" && layer.kind !== "point") ||
       (layer.group === "services" && layer.kind !== "point") ||
       (layer.group === "earth-observation" && layer.kind !== "point");
-    const promoteId =
-      layer.id === "analysis-hotspot-clusters"
-        ? "cluster_id"
-        : layer.group === "analysis" && layer.kind === "point"
-          ? "sap_id"
-          : layer.group === "analysis" && layer.kind !== "point"
-            ? "h3_id"
-            : layer.group === "vulnerability"
-              ? "h3_id"
-              : layer.group === "services" && layer.kind !== "point"
-                ? "h3_id"
-                : layer.group === "earth-observation" && layer.kind !== "point"
-                  ? "grid_id"
-                  : layer.group === "ptal" && layer.kind !== "point"
-                    ? "h3_id"
-                    : layer.group === "ptal" && layer.kind === "point"
-                      ? "sap_id"
-                      : "id";
+    const promoteId = featurePromoteId(layer);
 
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, {
         type: "geojson",
         data: `/api/layers/${layer.id}?v=${layer.sizeBytes}`,
         promoteId,
-        buffer: isLargeSurface ? 0 : undefined,
+        buffer: isLargeSurface ? LARGE_SURFACE_TILE_BUFFER : undefined,
         tolerance: isLargeSurface ? 1.15 : undefined,
         maxzoom: isLargeSurface ? 11 : undefined,
       });
@@ -2084,6 +2074,45 @@ function GeoJsonLayer({
       layer,
       servicePointColor(layer, stopModeColor(layer, displayColor)),
     );
+    const outlineColor = isContextPolygon
+      ? "#1f2937"
+      : isPublicTransportPolygon
+        ? "rgba(15,23,42,0.34)"
+        : isAnalysisPolygon
+          ? "rgba(15,23,42,0.32)"
+          : isVulnerabilityPolygon
+            ? "rgba(15,23,42,0.32)"
+            : isServicePolygon
+              ? "rgba(15,23,42,0.32)"
+              : isEarthObservationPolygon
+                ? "rgba(15,23,42,0.3)"
+                : displayColor;
+    const outlineOpacity = isContextPolygon
+      ? 0.82
+      : isPublicTransportPolygon
+        ? 0.42
+        : isAnalysisPolygon
+          ? 0.34
+          : isVulnerabilityPolygon
+            ? 0.34
+            : isServicePolygon
+              ? 0.34
+              : isEarthObservationPolygon
+                ? 0.34
+                : Math.min(effectiveOpacity + 0.28, 0.9);
+    const outlineWidth = isContextPolygon
+      ? 1.15
+      : isPublicTransportPolygon
+        ? 0.35
+        : isAnalysisPolygon
+          ? 0.32
+          : isVulnerabilityPolygon
+            ? 0.32
+            : isServicePolygon
+              ? 0.32
+              : isEarthObservationPolygon
+                ? 0.32
+                : 0.8;
 
     if (layer.kind === "polygon" || layer.kind === "mixed") {
       map.addLayer({
@@ -2117,45 +2146,9 @@ function GeoJsonLayer({
         source: sourceId,
         filter: geometryFilter("Polygon"),
         paint: {
-          "line-color": isContextPolygon
-            ? "#1f2937"
-            : isPublicTransportPolygon
-              ? "rgba(15,23,42,0.34)"
-              : isAnalysisPolygon
-                ? "rgba(15,23,42,0.32)"
-                : isVulnerabilityPolygon
-                  ? "rgba(15,23,42,0.32)"
-                  : isServicePolygon
-                    ? "rgba(15,23,42,0.32)"
-                    : isEarthObservationPolygon
-                      ? "rgba(15,23,42,0.3)"
-                      : displayColor,
-          "line-opacity": isContextPolygon
-            ? 0.82
-            : isPublicTransportPolygon
-              ? 0.42
-              : isAnalysisPolygon
-                ? 0.34
-                : isVulnerabilityPolygon
-                  ? 0.34
-                  : isServicePolygon
-                    ? 0.34
-                    : isEarthObservationPolygon
-                      ? 0.34
-                      : Math.min(effectiveOpacity + 0.28, 0.9),
-          "line-width": isContextPolygon
-            ? 1.15
-            : isPublicTransportPolygon
-              ? 0.35
-              : isAnalysisPolygon
-                ? 0.32
-                : isVulnerabilityPolygon
-                  ? 0.32
-                  : isServicePolygon
-                    ? 0.32
-                    : isEarthObservationPolygon
-                      ? 0.32
-                      : 0.8,
+          "line-color": selectedLinePaint("#000000", outlineColor),
+          "line-opacity": selectedLinePaint(1, outlineOpacity),
+          "line-width": selectedLinePaint(2.8, outlineWidth),
         },
       });
     }
@@ -2167,9 +2160,9 @@ function GeoJsonLayer({
         source: sourceId,
         filter: geometryFilter("LineString"),
         paint: {
-          "line-color": displayColor,
+          "line-color": selectedLinePaint("#000000", displayColor),
           "line-opacity": effectiveOpacity,
-          "line-width": 2,
+          "line-width": selectedLinePaint(4, 2),
         },
       });
     }
@@ -2197,8 +2190,11 @@ function GeoJsonLayer({
           "circle-color": pointColor,
           "circle-opacity": effectiveOpacity,
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 13, 5],
-          "circle-stroke-color": "rgba(255,255,255,0.92)",
-          "circle-stroke-width": 1,
+          "circle-stroke-color": selectedLinePaint(
+            "#000000",
+            "rgba(255,255,255,0.92)",
+          ),
+          "circle-stroke-width": selectedLinePaint(2.5, 1),
         },
       });
     }
@@ -2211,6 +2207,7 @@ function GeoJsonLayer({
 
       onFeatureSelect({
         layer,
+        featureId: featureIdFromRenderedFeature(layer, feature),
         properties: feature.properties as GeoJSON.GeoJsonProperties,
         coordinate: [event.lngLat.lng, event.lngLat.lat],
       });
@@ -2247,11 +2244,111 @@ function GeoJsonLayer({
     };
   }, [contrast, isLoaded, layer, map, material, onFeatureSelect, opacity]);
 
+  React.useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    const sourceId = stableLayerSourceId(layer);
+    if (!map.getSource(sourceId)) return;
+
+    const nextFeatureId =
+      selectedFeature?.layer.id === layer.id ? selectedFeature.featureId : null;
+    const previousFeatureId = selectedFeatureIdRef.current;
+
+    try {
+      if (previousFeatureId != null && previousFeatureId !== nextFeatureId) {
+        map.setFeatureState(
+          { source: sourceId, id: previousFeatureId },
+          { selected: false },
+        );
+      }
+
+      if (nextFeatureId != null) {
+        map.setFeatureState(
+          { source: sourceId, id: nextFeatureId },
+          { selected: true },
+        );
+      }
+
+      selectedFeatureIdRef.current = nextFeatureId;
+    } catch {
+      selectedFeatureIdRef.current = null;
+    }
+
+    return () => {
+      const currentFeatureId = selectedFeatureIdRef.current;
+      if (currentFeatureId == null || !map.getSource(sourceId)) return;
+
+      try {
+        map.setFeatureState(
+          { source: sourceId, id: currentFeatureId },
+          { selected: false },
+        );
+      } catch {
+        // Map style changes can remove source state before this layer unmounts.
+      }
+      selectedFeatureIdRef.current = null;
+    };
+  }, [isLoaded, layer, map, selectedFeature]);
+
   return null;
 }
 
 function stableLayerSourceId(layer: PublicMilanLayer) {
   return `milan-source-${layer.fileName.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+}
+
+function featurePromoteId(layer: PublicMilanLayer) {
+  return layer.id === "analysis-hotspot-clusters"
+    ? "cluster_id"
+    : layer.group === "analysis" && layer.kind === "point"
+      ? "sap_id"
+      : layer.group === "analysis" && layer.kind !== "point"
+        ? "h3_id"
+        : layer.group === "vulnerability"
+          ? "h3_id"
+          : layer.group === "services" && layer.kind !== "point"
+            ? "h3_id"
+            : layer.group === "earth-observation" && layer.kind !== "point"
+              ? "grid_id"
+              : layer.group === "ptal" && layer.kind !== "point"
+                ? "h3_id"
+                : layer.group === "ptal" && layer.kind === "point"
+                  ? "sap_id"
+                  : "id";
+}
+
+function featureIdFromRenderedFeature(
+  layer: PublicMilanLayer,
+  feature: NonNullable<MapLayerMouseEvent["features"]>[number],
+) {
+  return (
+    normalizeFeatureId(feature.id) ??
+    normalizeFeatureId(feature.properties?.[featurePromoteId(layer)])
+  );
+}
+
+function normalizeFeatureId(value: unknown) {
+  return typeof value === "string" || typeof value === "number" ? value : null;
+}
+
+type SelectedFeaturePaintValue =
+  | NonNullable<LineLayerSpecification["paint"]>[keyof NonNullable<
+      LineLayerSpecification["paint"]
+    >]
+  | NonNullable<CircleLayerSpecification["paint"]>[keyof NonNullable<
+      CircleLayerSpecification["paint"]
+    >];
+
+function selectedLinePaint<T extends SelectedFeaturePaintValue>(
+  selectedValue: T,
+  fallbackValue: T,
+) {
+  return [
+    "case",
+    ["boolean", ["feature-state", "selected"], false],
+    selectedValue,
+    fallbackValue,
+  ] as unknown as T;
 }
 
 function MainDirectoryHeader({
@@ -3171,6 +3268,41 @@ type AnalysisChatMessage = {
   content: string;
 };
 
+type ScoreFormulaTerm = {
+  label: string;
+  value: number;
+  weight?: number;
+  contribution?: number;
+  description?: string;
+};
+
+type ScoreFormulaSourceValue = {
+  label: string;
+  value: number;
+};
+
+type ScoreFormulaMetric = {
+  key: string;
+  label: string;
+  value: number;
+  formula: string;
+  equation: string;
+  summary: string;
+  terms: ScoreFormulaTerm[];
+  sourceValues: ScoreFormulaSourceValue[];
+  notes?: string[];
+};
+
+type ScoreFormulaResponse = {
+  scope: {
+    type: "citywide" | "h3";
+    h3Id: string | null;
+    label: string;
+  };
+  sources: string[];
+  metrics: ScoreFormulaMetric[];
+};
+
 function AnalysisDashboard({
   groups,
   theme,
@@ -3205,6 +3337,7 @@ function AnalysisDashboard({
     "data_confidence_score",
     ANALYSIS_DASHBOARD_SUMMARY.meanConfidence,
   );
+  const selectedH3Id = analysisText(selectedProps, "h3_id", "");
   const breakdown = React.useMemo(
     () =>
       ANALYSIS_DASHBOARD_SUMMARY.breakdown.map((item) => ({
@@ -3262,6 +3395,7 @@ function AnalysisDashboard({
                     opacity={0.84}
                     material="default"
                     contrast={1}
+                    selectedFeature={selectedFeature}
                     onFeatureSelect={setSelectedFeature}
                   />
                   {boundaryLayer ? (
@@ -3270,6 +3404,7 @@ function AnalysisDashboard({
                       opacity={1}
                       material="default"
                       contrast={1}
+                      selectedFeature={selectedFeature}
                       onFeatureSelect={setSelectedFeature}
                     />
                   ) : null}
@@ -3319,6 +3454,7 @@ function AnalysisDashboard({
                   label={item.label}
                   value={item.value}
                   color={item.color}
+                  h3Id={selectedH3Id}
                   compact
                 />
               ))}
@@ -3647,57 +3783,219 @@ function DashboardScoreBar({
   label,
   value,
   color,
+  h3Id,
   compact = false,
 }: {
   scoreKey: string;
   label: string;
   value: number;
   color: string;
+  h3Id?: string;
   compact?: boolean;
 }) {
+  const [open, setOpen] = React.useState(false);
+
   return (
-    <div
-      className={cn(
-        "grid items-center gap-3 text-sm",
-        compact
-          ? "grid-cols-[16rem_minmax(0,1fr)_2.5rem]"
-          : "grid-cols-[11rem_minmax(0,1fr)_3rem]",
-      )}
-    >
-      <span
-        className={cn(
-          "flex min-w-0 items-center gap-2 text-muted-foreground",
-          compact ? "whitespace-nowrap" : "truncate",
-        )}
-      >
-        <span
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Open ${label} formula details`}
           className={cn(
-            "flex shrink-0 items-center justify-center rounded-lg bg-muted",
-            compact ? "size-6" : "size-7",
+            "grid w-full items-center gap-3 rounded-lg py-1 text-left text-sm outline-none transition hover:bg-muted/45 focus-visible:ring-2 focus-visible:ring-ring",
+            compact
+              ? "grid-cols-[16rem_minmax(0,1fr)_2.5rem]"
+              : "grid-cols-[11rem_minmax(0,1fr)_3rem]",
           )}
-          style={{ color }}
-          aria-hidden="true"
         >
-          <ScoreBreakdownIcon scoreKey={scoreKey} />
-        </span>
-        <span className={compact ? "whitespace-nowrap" : "truncate"}>
-          {label}
-        </span>
-      </span>
-      <div className="h-1.5 rounded-full bg-muted">
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${Math.max(0, Math.min(100, value))}%`,
-            backgroundColor: color,
-          }}
+          <span
+            className={cn(
+              "flex min-w-0 items-center gap-2 text-muted-foreground",
+              compact ? "whitespace-nowrap" : "truncate",
+            )}
+          >
+            <span
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-lg bg-muted",
+                compact ? "size-6" : "size-7",
+              )}
+              style={{ color }}
+              aria-hidden="true"
+            >
+              <ScoreBreakdownIcon scoreKey={scoreKey} />
+            </span>
+            <span className={compact ? "whitespace-nowrap" : "truncate"}>
+              {label}
+            </span>
+          </span>
+          <span className="h-1.5 rounded-full bg-muted">
+            <span
+              className="block h-full rounded-full"
+              style={{
+                width: `${Math.max(0, Math.min(100, value))}%`,
+                backgroundColor: color,
+              }}
+            />
+          </span>
+          <span className="text-right font-medium tabular-nums">
+            {value.toFixed(0)}
+          </span>
+        </button>
+      </DialogTrigger>
+      {open ? (
+        <DashboardScoreFormulaDialog
+          scoreKey={scoreKey}
+          label={label}
+          value={value}
+          color={color}
+          h3Id={h3Id}
         />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function DashboardScoreFormulaDialog({
+  scoreKey,
+  label,
+  value,
+  color,
+  h3Id,
+}: {
+  scoreKey: string;
+  label: string;
+  value: number;
+  color: string;
+  h3Id?: string;
+}) {
+  const [formulaDetails, setFormulaDetails] =
+    React.useState<ScoreFormulaMetric | null>(null);
+  const [status, setStatus] = React.useState<"loading" | "success" | "error">(
+    "loading",
+  );
+
+  React.useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ metric: scoreKey });
+    if (h3Id) params.set("h3_id", h3Id);
+
+    fetch(`/api/analysis/score-formula?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load score formula details");
+        }
+        return (await response.json()) as ScoreFormulaResponse;
+      })
+      .then((payload) => {
+        const details = payload.metrics.find((item) => item.key === scoreKey);
+        if (!details) {
+          throw new Error("Missing score formula details");
+        }
+        setFormulaDetails(details);
+        setStatus("success");
+      })
+      .catch((error: unknown) => {
+        if ((error as Error).name === "AbortError") return;
+        setStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [h3Id, scoreKey]);
+
+  const details = formulaDetails;
+  const terms = details?.terms ?? [];
+
+  return (
+    <DialogContent className="max-h-[min(34rem,calc(100vh-2rem))] max-w-[min(34rem,calc(100vw-2rem))] overflow-hidden p-0">
+      <DialogTitle className="sr-only">
+        {details?.label ?? label} calculation
+      </DialogTitle>
+      <div className="max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto px-5 py-5">
+        {status === "loading" ? (
+          <div className="text-sm text-muted-foreground">
+            Loading formula details...
+          </div>
+        ) : null}
+        {status === "error" ? (
+          <div className="text-sm text-destructive">
+            Formula details are not available for this score.
+          </div>
+        ) : null}
+        {details ? (
+          <div className="space-y-4">
+            <ScoreOnlyDisplay value={details.value ?? value} color={color} />
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold">Score contribution</h3>
+              <div className="space-y-3">
+                {terms.map((term) => (
+                  <ScoreContributionBar
+                    key={term.label}
+                    label={term.label}
+                    value={term.contribution ?? term.value}
+                    color={color}
+                  />
+                ))}
+              </div>
+            </section>
+          </div>
+        ) : null}
       </div>
-      <span className="text-right font-medium tabular-nums">
-        {value.toFixed(0)}
+    </DialogContent>
+  );
+}
+
+function ScoreOnlyDisplay({
+  value,
+  color,
+}: {
+  value: number;
+  color: string;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-1">
+      <span className="text-sm text-muted-foreground">Displayed score</span>
+      <span
+        className="text-2xl font-semibold leading-none tabular-nums"
+        style={{ color }}
+      >
+        {formatFormulaNumber(value)}
       </span>
     </div>
   );
+}
+
+function ScoreContributionBar({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: string;
+}) {
+  const barValue = Math.max(0, Math.min(100, Math.abs(value)));
+  const barColor = value < 0 ? "oklch(0.55 0 0)" : color;
+
+  return (
+    <div className="grid grid-cols-[minmax(7.5rem,0.9fr)_minmax(0,1fr)_3.25rem] items-center gap-3 text-sm">
+      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <Progress
+        value={barValue}
+        className="h-2"
+        style={{ "--primary": barColor } as React.CSSProperties}
+      />
+      <span className="text-right font-medium tabular-nums">
+        {formatFormulaNumber(value)}
+      </span>
+    </div>
+  );
+}
+
+function formatFormulaNumber(value: number) {
+  if (!Number.isFinite(value)) return "0.0";
+  return Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1);
 }
 
 function ScoreBreakdownIcon({ scoreKey }: { scoreKey: string }) {
@@ -5262,6 +5560,7 @@ function MilanMapCanvas({
             opacity={layerOpacity(layer, opacities)}
             material="default"
             contrast={1}
+            selectedFeature={selectedFeature}
             onFeatureSelect={onFeatureSelect}
           />
         ))}
@@ -5272,6 +5571,7 @@ function MilanMapCanvas({
             opacity={layerOpacity(layer, opacities)}
             material="default"
             contrast={1}
+            selectedFeature={selectedFeature}
             onFeatureSelect={onFeatureSelect}
           />
         ))}

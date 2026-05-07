@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "{{name}}",
+  title: "LIMEN",
   description: "Interactive Milan GIS decision-support platform.",
 };
 

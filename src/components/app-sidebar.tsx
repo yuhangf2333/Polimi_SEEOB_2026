@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
-  GalleryVerticalEndIcon,
   GaugeIcon,
   MoonIcon,
   SatelliteIcon,
@@ -16,7 +16,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { NavMain } from "@/components/nav-main"
-import { TeamSwitcher } from "@/components/team-switcher"
 import {
   LLM_PROVIDER_PRESETS,
   type LlmProviderId,
@@ -161,13 +160,6 @@ export function AppSidebar({
   }, [llmSettings, onLlmSettingsChange])
 
   const data = {
-    teams: [
-      {
-        name: "{{name}}",
-        logo: <GalleryVerticalEndIcon />,
-        plan: "{{name}}",
-      },
-    ],
     navMain: [
       {
         id: "ai-agent",
@@ -377,14 +369,23 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader className="relative min-h-14 pr-11 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pr-2">
-        <div className="group-data-[collapsible=icon]:hidden">
-          <TeamSwitcher teams={data.teams} />
+      <SidebarHeader className="min-h-[4.5rem] px-5 py-2 group-data-[collapsible=icon]:px-2">
+        <div className="flex min-h-12 w-full items-center justify-between group-data-[collapsible=icon]:justify-center">
+          <div className="flex items-center group-data-[collapsible=icon]:hidden">
+            <Image
+              src="/images/limen.svg"
+              alt="LIMEN"
+              width={168}
+              height={40}
+              unoptimized
+              className="object-contain"
+            />
+          </div>
+          <SidebarTrigger
+            title="Toggle navigation"
+            className="relative z-30 rounded-lg border-0 bg-transparent text-sidebar-foreground shadow-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:not-aria-[haspopup]:translate-y-0"
+          />
         </div>
-        <SidebarTrigger
-          title="Toggle navigation"
-          className="absolute top-3 right-2 rounded-lg border border-sidebar-border bg-sidebar shadow-sm group-data-[collapsible=icon]:top-3 group-data-[collapsible=icon]:right-1/2 group-data-[collapsible=icon]:translate-x-1/2"
-        />
       </SidebarHeader>
       <SidebarContent>
         <NavMain

@@ -85,3 +85,51 @@ test("analysis prose renders as readable body copy instead of bolding whole labe
   assert.match(source, /renderParagraphMarkdown\(block\.text, muted\)/);
   assert.doesNotMatch(source, /block\.emphasis \? "font-medium text-foreground" : "text-foreground\/90"/);
 });
+
+test("dashboard score bars keep the row list and open formula details in a dialog", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /function DashboardScoreFormulaDialog/);
+  assert.match(source, /\/api\/analysis\/score-formula/);
+  assert.match(source, /formulaDetails/);
+  assert.match(source, /Score contribution/);
+  assert.match(source, /<Dialog open=\{open\} onOpenChange=\{setOpen\}>/);
+  assert.match(source, /<DialogTrigger asChild>/);
+  assert.match(source, /aria-label=\{`Open \$\{label\} formula details`\}/);
+  assert.match(source, /<DialogContent className="max-h-\[min\(34rem,calc\(100vh-2rem\)\)\]/);
+  assert.doesNotMatch(source, /const \[expandedScoreKey, setExpandedScoreKey\]/);
+  assert.doesNotMatch(source, /function DashboardScoreFormulaPanel/);
+  assert.doesNotMatch(source, /aria-expanded=\{expanded\}/);
+  assert.doesNotMatch(source, /setExpandedScoreKey\(\(current\) =>/);
+});
+
+test("score formula dialog keeps the content to shadcn progress bars", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /import \{ Progress \} from "@\/components\/ui\/progress"/);
+  assert.match(source, /function ScoreContributionBar/);
+  assert.match(source, /function ScoreOnlyDisplay/);
+  assert.match(source, /<Progress/);
+  assert.match(source, /value=\{barValue\}/);
+  assert.match(source, /<ScoreOnlyDisplay/);
+  assert.doesNotMatch(source, /<DialogHeader className="border-b px-5 py-4 pr-12">/);
+  assert.doesNotMatch(source, /<DialogDescription>\{scopeLabel\}<\/DialogDescription>/);
+  assert.doesNotMatch(source, /label="Displayed score"[\s\S]*<ScoreContributionBar/);
+  assert.doesNotMatch(source, /<h3 className="text-sm font-semibold">Formula<\/h3>/);
+  assert.doesNotMatch(source, /<h3 className="text-sm font-semibold">Source values<\/h3>/);
+  assert.doesNotMatch(source, /details\.sourceValues\.map/);
+  assert.doesNotMatch(source, /details\.notes\.map/);
+});
+
+test("score formula dialog avoids nested box containers inside the popup body", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /className="max-h-\[min\(28rem,calc\(100vh-4rem\)\)\] overflow-y-auto px-5 py-5"/);
+  assert.match(source, /className="flex items-baseline justify-between gap-4 py-1"/);
+  assert.match(source, /<div className="space-y-3">/);
+  assert.doesNotMatch(source, /expanded && "bg-muted\/40 ring-1 ring-foreground\/25"/);
+  assert.doesNotMatch(source, /expanded && "bg-muted\/20"/);
+  assert.doesNotMatch(source, /className="max-h-52 overflow-y-auto rounded-xl border bg-background\/80 p-3 shadow-sm"/);
+  assert.doesNotMatch(source, /className="flex items-center justify-between gap-4 rounded-xl border bg-muted\/20 px-4 py-3"/);
+  assert.doesNotMatch(source, /className="space-y-3 rounded-xl border p-3"/);
+});

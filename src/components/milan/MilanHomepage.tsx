@@ -5,20 +5,17 @@ import { useState } from "react";
 import {
   ArrowRight,
   ChevronDown,
-  Clock3,
   Database,
   Mail,
   Map,
   Menu,
-  Network,
   Search,
   Sparkles,
   TramFront,
-  Workflow,
   X,
 } from "@/components/icons";
 
-const productName = "{{name}}";
+const productName = "LIMEN";
 const liveMapUrl = "/dashboard";
 
 const heroTabs = [
@@ -77,24 +74,6 @@ const promptExamples = [
   "Explain why this hotspot is high priority",
   "Compare equity-first and mobility-network scenarios",
   "Write a report paragraph for the selected municipality",
-];
-
-const workflowPoints = [
-  {
-    icon: Sparkles,
-    title: "Transparent scores first.",
-    text: "The assistant starts from computed scores, dominant drivers, confidence classes, and typology rules.",
-  },
-  {
-    icon: Clock3,
-    title: "Scenario-based decisions.",
-    text: "Weights can support equity-first, service-access, mobility-network, or growth-mismatch planning views.",
-  },
-  {
-    icon: Network,
-    title: "Designed for public actors.",
-    text: "Municipalities, metropolitan authorities, regions, and transport agencies can share one prioritization workflow.",
-  },
 ];
 
 const templateCards = [
@@ -160,16 +139,9 @@ export function MilanHomepage() {
       <section className="atlas-hero">
         <div className="atlas-hero__grid" aria-hidden="true" />
         <div className="atlas-container atlas-hero__inner">
-          <a className="atlas-ai-pill" href="#assistant">
-            <span>
-              <Sparkles size={14} fill="currentColor" />
-              TP-IPT
-            </span>
-            Decision cockpit for transport poverty
-            <ArrowRight size={15} />
-          </a>
-
-          <h1>{productName}</h1>
+          <h1 className="atlas-logo-heading">
+            <LimenLogo className="atlas-logo-heading__image" preload />
+          </h1>
           <p className="atlas-hero__lead">
             A WebGIS decision-support platform that combines social vulnerability, public transport deficit,
             essential-services deficit, and EO-derived territorial context to rank intervention priorities.
@@ -178,9 +150,6 @@ export function MilanHomepage() {
           <div className="atlas-hero__buttons">
             <a className="atlas-btn" href={liveMapUrl}>
               Open live map
-            </a>
-            <a className="atlas-btn atlas-btn--ghost" href="#assistant">
-              Read the logic
             </a>
           </div>
 
@@ -362,45 +331,6 @@ export function MilanHomepage() {
         </div>
       </section>
 
-      <section className="atlas-section atlas-workflows" id="workflow">
-        <div className="atlas-split-heading">
-          <div>
-            <h2>Designed around transparent computation.</h2>
-            <p>
-              The roadmap moves from spatial harmonization to normalized deficits, hotspot scoring, priority scoring,
-              confidence classes, typologies, and report export.
-            </p>
-          </div>
-          <a className="atlas-btn" href={liveMapUrl}>
-            Inspect live layers <ArrowRight size={18} />
-          </a>
-        </div>
-
-        <div className="atlas-workflow-canvas">
-          <Image src="/images/atlas/workflows-canvas.svg" alt="Decision workflow canvas" width={1105} height={521} />
-          <div className="atlas-workflow-node atlas-workflow-node--a">
-            <Workflow size={22} />
-            Hotspot Score
-          </div>
-          <div className="atlas-workflow-node atlas-workflow-node--b">
-            <Network size={22} />
-            Priority Index
-          </div>
-        </div>
-
-        <div className="atlas-workflow-points">
-          {workflowPoints.map(({ icon: Icon, title, text }) => (
-            <article key={title}>
-              <span>
-                <Icon size={24} />
-              </span>
-              <h3>{title}</h3>
-              <p>{text}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section className="atlas-section atlas-collab">
         <div className="atlas-collab__copy">
           <h2>A planning-support product, not a black box.</h2>
@@ -517,7 +447,7 @@ export function MilanHomepage() {
             <h3>PRODUCT</h3>
             <a href="#assistant">Explanation assistant</a>
             <a href={liveMapUrl}>Live map</a>
-            <a href="#workflow">Computation roadmap</a>
+            <a href={liveMapUrl}>Computation roadmap</a>
           </nav>
           <nav aria-label="Analysis links">
             <h3>MODULES</h3>
@@ -536,7 +466,7 @@ export function MilanHomepage() {
             <h3>PROJECT</h3>
             <a href={liveMapUrl}>WebGIS viewer</a>
             <a href="#assistant">Prompt examples</a>
-            <a href="#workflow">MVP workflow</a>
+            <a href={liveMapUrl}>MVP workflow</a>
           </nav>
           <nav aria-label="Layer notes">
             <h3>BRIEFING LOGIC</h3>
@@ -550,7 +480,7 @@ export function MilanHomepage() {
         <div className="atlas-footer__bottom">
           <a className="atlas-logo" href="#">
             <span className="atlas-mark atlas-mark--milan" aria-hidden="true" />
-            {productName}
+            <LimenLogo className="atlas-footer-logo__image" />
           </a>
           <p>2026 / TP-IPT WebGIS decision-support homepage demo</p>
         </div>
@@ -593,15 +523,14 @@ function Header() {
   return (
     <header className="atlas-nav">
       <a className="atlas-logo" href="#">
-        <span className="atlas-mark atlas-mark--milan" aria-hidden="true" />
-        {productName}
+        <LimenLogo className="atlas-logo__image" />
       </a>
 
       <nav className="atlas-nav__links" aria-label="Primary navigation">
         <a className="atlas-nav__link" href="#assistant">
           Product <ChevronDown size={14} />
         </a>
-        <a className="atlas-nav__link" href="#workflow">
+        <a className="atlas-nav__link" href={liveMapUrl}>
           Scoring <ChevronDown size={14} />
         </a>
         <a className="atlas-nav__link" href={liveMapUrl}>
@@ -613,7 +542,7 @@ function Header() {
       </nav>
 
       <div className="atlas-nav__actions">
-        <a href="#workflow">Roadmap</a>
+        <a href={liveMapUrl}>Roadmap</a>
         <a href={liveMapUrl}>Open viewer</a>
         <a className="atlas-btn atlas-btn--small" href={liveMapUrl}>
           Launch
@@ -635,7 +564,7 @@ function Header() {
           <a href="#assistant" onClick={() => setOpen(false)}>
             Product
           </a>
-          <a href="#workflow" onClick={() => setOpen(false)}>
+          <a href={liveMapUrl} onClick={() => setOpen(false)}>
             Scoring
           </a>
           <a href={liveMapUrl} onClick={() => setOpen(false)}>
@@ -644,5 +573,25 @@ function Header() {
         </div>
       ) : null}
     </header>
+  );
+}
+
+function LimenLogo({
+  className,
+  preload = false,
+}: {
+  className: string;
+  preload?: boolean;
+}) {
+  return (
+    <Image
+      src="/images/limen.svg"
+      alt={productName}
+      width={380}
+      height={90}
+      unoptimized
+      preload={preload}
+      className={className}
+    />
   );
 }
