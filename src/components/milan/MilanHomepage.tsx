@@ -585,7 +585,7 @@ function LimenLogo({
 }) {
   return (
     <Image
-      src="/images/limen.svg"
+      src="/images/night_limen.svg"
       alt={productName}
       width={380}
       height={90}

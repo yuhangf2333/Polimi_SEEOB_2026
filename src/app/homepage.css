@@ -22,7 +22,6 @@
 .milan-atlas-page .atlas-footer-logo__image,
 .milan-atlas-page .atlas-logo-heading__image {
   display: block;
-  filter: brightness(0) invert(1);
   height: auto;
 }
 

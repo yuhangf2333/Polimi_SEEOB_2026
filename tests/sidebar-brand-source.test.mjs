@@ -3,14 +3,18 @@ import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const sidebarSourcePath = new URL("../src/components/app-sidebar.tsx", import.meta.url);
-const logoAssetPath = new URL("../public/images/limen.svg", import.meta.url);
+const dayLogoAssetPath = new URL("../public/images/day_limen.svg", import.meta.url);
+const nightLogoAssetPath = new URL("../public/images/night_limen.svg", import.meta.url);
 
 test("sidebar brand renders the LIMEN logo instead of placeholder text", async () => {
   const source = await readFile(sidebarSourcePath, "utf8");
 
-  assert.match(source, /src="\/images\/limen\.svg"/);
+  assert.match(source, /"\/images\/day_limen\.svg"/);
+  assert.match(source, /"\/images\/night_limen\.svg"/);
+  assert.match(source, /src=\{logoSrc\}/);
   assert.doesNotMatch(source, /\{\{name\}\}/);
-  await access(logoAssetPath);
+  await access(dayLogoAssetPath);
+  await access(nightLogoAssetPath);
 });
 
 test("sidebar toggle aligns with the logo center without a framed button treatment", async () => {

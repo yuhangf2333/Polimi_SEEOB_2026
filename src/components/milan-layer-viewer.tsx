@@ -11,7 +11,6 @@ import type {
 } from "maplibre-gl";
 import {
   Bot,
-  ChevronRight,
   CheckCircle2,
   ChevronDown,
   DatabaseZap,
@@ -2361,8 +2360,6 @@ function MainDirectoryHeader({
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
       <nav className="flex min-w-0 items-center gap-2 text-sm">
-        <span className="truncate text-muted-foreground">Milan GIS</span>
-        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
         <span className="truncate font-medium">{activeFunction.label}</span>
       </nav>
       {action ? <div className="ml-auto flex shrink-0 items-center">{action}</div> : null}
@@ -3261,7 +3258,7 @@ function DetailRow({
 }
 
 const DASHBOARD_PANEL_CLASS =
-  "min-h-0 overflow-hidden rounded-xl bg-background/80 py-0 ring-0 shadow-none";
+  "w-full min-w-0 max-w-full overflow-hidden rounded-xl bg-background/80 py-0 ring-0 shadow-none";
 
 type AnalysisChatMessage = {
   role: "assistant" | "user";
@@ -3374,10 +3371,10 @@ function AnalysisDashboard({
   };
 
   return (
-    <div className="relative h-full overflow-hidden bg-muted/20 p-1.5 lg:p-2">
-      <div className="grid h-full min-h-0 gap-1.5 lg:grid-cols-[minmax(0,2.28fr)_minmax(360px,0.72fr)] lg:grid-rows-[minmax(176px,0.29fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2.22fr)_minmax(390px,0.78fr)]">
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-1 lg:row-start-2")}>
-          <CardContent className="h-full p-0">
+    <div className="relative h-full w-full min-w-0 max-w-full overflow-y-auto lg:overflow-hidden overflow-x-hidden bg-muted/20 p-1.5 lg:p-2">
+      <div className="grid min-h-full w-full min-w-0 gap-1.5 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,2.28fr)_minmax(360px,0.72fr)] lg:grid-rows-[minmax(176px,0.29fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2.22fr)_minmax(390px,0.78fr)]">
+        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-2 min-h-[22rem] lg:order-none lg:col-start-1 lg:row-start-2 lg:min-h-0")}>
+          <CardContent className="h-full min-w-0 p-0">
             <div className="relative h-full overflow-hidden rounded-xl bg-muted">
               {priorityLayer ? (
                 <GeoMap
@@ -3419,8 +3416,8 @@ function AnalysisDashboard({
           </CardContent>
         </Card>
 
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-2 lg:row-span-2")}>
-          <CardContent className="flex h-full min-h-0 flex-col gap-3 p-0">
+        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-3 min-h-[22rem] lg:order-none lg:col-start-2 lg:row-span-2 lg:min-h-0")}>
+          <CardContent className="flex h-full min-h-0 min-w-0 flex-col gap-3 p-0">
             {panelMode === "chat" && llmSettings.enabled ? (
               <AnalysisChatBox
                 className="min-h-0 flex-1"
@@ -3439,8 +3436,8 @@ function AnalysisDashboard({
           </CardContent>
         </Card>
 
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "lg:col-start-1 lg:row-start-1")}>
-          <CardContent className="grid h-full min-h-0 grid-cols-[minmax(390px,0.42fr)_minmax(0,1fr)] items-center gap-3 p-2">
+        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-1 min-h-[18rem] lg:order-none lg:col-start-1 lg:row-start-1 lg:min-h-0")}>
+          <CardContent className="grid h-full min-h-0 min-w-0 grid-cols-1 items-stretch gap-3 overflow-hidden p-2 sm:grid-cols-[minmax(0,0.58fr)_minmax(0,1fr)] sm:items-center lg:grid-cols-[minmax(390px,0.42fr)_minmax(0,1fr)]">
             <AnalysisPrioritySummary
               priorityScore={priorityScore}
               priorityStatus={priorityStatus}
@@ -3522,7 +3519,7 @@ function AnalysisRecommendationPanel({
   return (
     <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/75 p-4", className)}>
       <div className="flex shrink-0 items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/15 text-yellow-500 dark:bg-yellow-400/10 dark:text-yellow-300">
           <Lightbulb className="size-4" />
         </span>
         <div className="min-w-0">
@@ -3802,9 +3799,9 @@ function DashboardScoreBar({
           type="button"
           aria-label={`Open ${label} formula details`}
           className={cn(
-            "grid w-full items-center gap-3 rounded-lg py-1 text-left text-sm outline-none transition hover:bg-muted/45 focus-visible:ring-2 focus-visible:ring-ring",
+            "grid w-full items-center gap-x-3 gap-y-2 rounded-lg py-1 text-left text-sm outline-none transition hover:bg-muted/45 focus-visible:ring-2 focus-visible:ring-ring",
             compact
-              ? "grid-cols-[16rem_minmax(0,1fr)_2.5rem]"
+              ? "grid-cols-[minmax(0,1fr)_2.5rem] sm:grid-cols-[minmax(12rem,0.72fr)_minmax(0,1fr)_2.5rem] lg:grid-cols-[16rem_minmax(0,1fr)_2.5rem]"
               : "grid-cols-[11rem_minmax(0,1fr)_3rem]",
           )}
         >
@@ -3828,7 +3825,7 @@ function DashboardScoreBar({
               {label}
             </span>
           </span>
-          <span className="h-1.5 rounded-full bg-muted">
+          <span className={cn("h-1.5 rounded-full bg-muted", compact && "order-3 col-span-2 sm:order-none sm:col-span-1")}>
             <span
               className="block h-full rounded-full"
               style={{
@@ -3837,7 +3834,7 @@ function DashboardScoreBar({
               }}
             />
           </span>
-          <span className="text-right font-medium tabular-nums">
+          <span className={cn("text-right font-medium tabular-nums", compact && "order-2 sm:order-none")}>
             {value.toFixed(0)}
           </span>
         </button>
@@ -4113,10 +4110,10 @@ function ScoreGauge({
 
   if (isMedium) {
     return (
-      <div className="grid w-full min-w-0 grid-cols-[minmax(148px,0.9fr)_minmax(7.25rem,1fr)] items-center gap-3 overflow-visible">
+      <div className="grid w-full min-w-0 grid-cols-1 items-center gap-1 overflow-hidden sm:grid-cols-[minmax(148px,0.9fr)_minmax(7.25rem,1fr)] sm:gap-3 sm:overflow-visible">
         <svg
           viewBox="0 0 120 78"
-          className="h-36 w-44"
+          className="h-28 w-40 justify-self-start sm:h-36 sm:w-44"
           aria-hidden="true"
         >
           <path
@@ -4148,17 +4145,17 @@ function ScoreGauge({
             transform={`rotate(${-90 + boundedValue * 1.8} 60 64)`}
           />
         </svg>
-        <div className="min-w-[7.25rem] justify-self-end">
+        <div className="min-w-0 justify-self-start sm:min-w-[7.25rem] sm:justify-self-end">
           <div
-            className="flex w-[7.25rem] items-baseline justify-end whitespace-nowrap leading-none tabular-nums"
+            className="flex w-full max-w-[7.25rem] items-baseline justify-start whitespace-nowrap leading-none tabular-nums sm:w-[7.25rem] sm:justify-end"
             style={{ color }}
           >
-            <span className="inline-block text-right text-[3.35rem] font-semibold">
+            <span className="inline-block text-right text-[3rem] font-semibold sm:text-[3.35rem]">
               {Math.round(boundedValue)}
             </span>
             <span className="ml-1 inline-block shrink-0 text-left text-base font-semibold">/100</span>
           </div>
-          <div className="mt-1 whitespace-nowrap text-right text-xs text-muted-foreground">
+          <div className="mt-1 whitespace-nowrap text-left text-xs text-muted-foreground sm:text-right">
             {label}
           </div>
         </div>
@@ -5718,7 +5715,7 @@ export function MilanLayerViewer({ groups }: MilanLayerViewerProps) {
               ) : null
             }
           />
-          <div className="min-h-0 flex-1">
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
             <MilanMapCanvas
               theme={theme}
               groups={groups}

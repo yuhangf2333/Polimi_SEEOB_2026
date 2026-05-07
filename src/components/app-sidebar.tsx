@@ -4,13 +4,13 @@ import * as React from "react"
 import Image from "next/image"
 import {
   GaugeIcon,
+  HandHeartIcon,
   MoonIcon,
   SatelliteIcon,
   SettingsIcon,
-  ShieldIcon,
   SunIcon,
   TramFrontIcon,
-  UserRoundCheckIcon,
+  UsersRoundIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -114,6 +114,8 @@ export function AppSidebar({
       ),
     [llmSettings.model, modelOptions],
   )
+  const logoSrc =
+    theme === "dark" ? "/images/night_limen.svg" : "/images/day_limen.svg"
 
   const testLlmConnection = React.useCallback(async () => {
     setConnectionStatus("testing")
@@ -222,7 +224,7 @@ export function AppSidebar({
         id: "vulnerability",
         title: "Vulnerability",
         url: "#",
-        icon: <ShieldIcon />,
+        icon: <UsersRoundIcon />,
         isActive: activeId === "vulnerability",
         items: [
           {
@@ -296,7 +298,7 @@ export function AppSidebar({
         id: "services",
         title: "Essential Services",
         url: "#",
-        icon: <UserRoundCheckIcon />,
+        icon: <HandHeartIcon />,
         isActive: activeId === "services",
         items: [
           {
@@ -373,7 +375,7 @@ export function AppSidebar({
         <div className="flex min-h-12 w-full items-center justify-between group-data-[collapsible=icon]:justify-center">
           <div className="flex items-center group-data-[collapsible=icon]:hidden">
             <Image
-              src="/images/limen.svg"
+              src={logoSrc}
               alt="LIMEN"
               width={168}
               height={40}

@@ -103,6 +103,35 @@ test("dashboard score bars keep the row list and open formula details in a dialo
   assert.doesNotMatch(source, /setExpandedScoreKey\(\(current\) =>/);
 });
 
+test("dashboard stacks panels and removes fixed-width score rows on mobile", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /overflow-y-auto lg:overflow-hidden/);
+  assert.match(source, /grid min-h-full w-full min-w-0 gap-1\.5/);
+  assert.match(source, /grid-cols-1/);
+  assert.match(source, /lg:grid-cols-\[minmax\(390px,0\.42fr\)_minmax\(0,1fr\)\]/);
+  assert.match(source, /grid-cols-\[minmax\(0,1fr\)_2\.5rem\] sm:grid-cols-\[minmax\(12rem,0\.72fr\)_minmax\(0,1fr\)_2\.5rem\]/);
+  assert.match(source, /grid-cols-1 items-center gap-1 overflow-hidden sm:grid-cols-\[minmax\(148px,0\.9fr\)_minmax\(7\.25rem,1fr\)\]/);
+  assert.doesNotMatch(source, /\? "grid-cols-\[16rem_minmax\(0,1fr\)_2\.5rem\]"/);
+});
+
+test("dashboard header keeps only the active section label", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /<nav className="flex min-w-0 items-center gap-2 text-sm">\s*<span className="truncate font-medium">\{activeFunction\.label\}<\/span>\s*<\/nav>/);
+  assert.doesNotMatch(source, /<span className="truncate text-muted-foreground">Milan GIS<\/span>/);
+  assert.doesNotMatch(source, /ChevronRight/);
+});
+
+test("recommendation panel lightbulb uses yellow emphasis", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /bg-yellow-400\/15/);
+  assert.match(source, /text-yellow-500/);
+  assert.match(source, /dark:text-yellow-300/);
+  assert.doesNotMatch(source, /rounded-xl bg-primary\/10 text-primary">\s*<Lightbulb/);
+});
+
 test("score formula dialog keeps the content to shadcn progress bars", async () => {
   const source = await loadDashboardSource();
 

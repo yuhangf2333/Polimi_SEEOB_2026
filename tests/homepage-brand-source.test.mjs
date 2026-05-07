@@ -3,7 +3,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const homepageSourcePath = new URL("../src/components/milan/MilanHomepage.tsx", import.meta.url);
+const homepageCssPath = new URL("../src/app/homepage.css", import.meta.url);
 const layoutSourcePath = new URL("../src/app/layout.tsx", import.meta.url);
+const dayLogoPath = new URL("../public/images/day_limen.svg", import.meta.url);
+const nightLogoPath = new URL("../public/images/night_limen.svg", import.meta.url);
 
 test("homepage replaces visible name placeholders with the LIMEN svg logo", async () => {
   const homepageSource = await readFile(homepageSourcePath, "utf8");
@@ -15,6 +18,22 @@ test("homepage replaces visible name placeholders with the LIMEN svg logo", asyn
   assert.match(homepageSource, /<LimenLogo className="atlas-logo__image" \/>/);
   assert.match(homepageSource, /<LimenLogo className="atlas-logo-heading__image" preload \/>/);
   assert.match(homepageSource, /<LimenLogo className="atlas-footer-logo__image" \/>/);
+});
+
+test("homepage dark-surface logos use the redesigned night SVG asset", async () => {
+  const homepageSource = await readFile(homepageSourcePath, "utf8");
+  const homepageCss = await readFile(homepageCssPath, "utf8");
+  const dayLogo = await readFile(dayLogoPath, "utf8");
+  const nightLogo = await readFile(nightLogoPath, "utf8");
+
+  assert.match(homepageSource, /src="\/images\/night_limen\.svg"/);
+  assert.doesNotMatch(homepageSource, /srcSet="\/images\/night_limen\.svg"/);
+  assert.doesNotMatch(homepageSource, /src="\/images\/day_limen\.svg"/);
+  assert.match(dayLogo, /fill="#000000"/);
+  assert.match(nightLogo, /fill="#FFFFFF"/);
+  assert.match(dayLogo, /fill="#35C68A"/);
+  assert.match(nightLogo, /fill="#35C68A"/);
+  assert.doesNotMatch(homepageCss, /filter:\s*brightness\(0\)\s*invert\(1\)/);
 });
 
 test("homepage removes the circled decorative and secondary hero controls", async () => {
