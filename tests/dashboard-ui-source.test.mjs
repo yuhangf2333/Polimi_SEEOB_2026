@@ -17,12 +17,43 @@ test("analysis chat exposes recommended questions through a drawer", async () =>
   assert.match(source, /const \[prompt, setPrompt\] = React\.useState\(""\)/);
 });
 
-test("analysis model pill opens a real dropdown menu", async () => {
+test("analysis chat groups recommended questions by category with AI prompt templates", async () => {
   const source = await loadDashboardSource();
 
-  assert.match(source, /DropdownMenuTrigger/);
-  assert.match(source, /Active model/);
-  assert.match(source, /Configured in Settings/);
+  assert.match(source, /const ANALYSIS_PRESET_CATEGORIES = \[/);
+  assert.match(source, /label: "Why is this area high priority\?"/);
+  assert.match(source, /prompt:\s*"What makes this area high priority\?/);
+  assert.match(source, /label: "Which stops and routes matter\?"/);
+  assert.match(source, /prompt:\s*"Which stops and routes matter here\?/);
+  assert.match(source, /const \[activePresetCategoryId, setActivePresetCategoryId\]/);
+  assert.match(source, /activePresetCategory\.questions\.map/);
+  assert.match(source, /choosePreset\(preset\)/);
+  assert.doesNotMatch(source, /label: "为什么这个区域优先级高？"/);
+});
+
+test("analysis model pill keeps model and provider inline without a dropdown", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /data-analysis-active-model/);
+  assert.match(source, /\{activeModel\}/);
+  assert.match(source, /\{llmSettings\.provider \|\| DEFAULT_LLM_SETTINGS\.provider\}/);
+  assert.doesNotMatch(source, /DropdownMenuTrigger/);
+  assert.doesNotMatch(source, /DropdownMenuContent/);
+  assert.doesNotMatch(source, /Configured in Settings/);
+  assert.doesNotMatch(source, /Provider: \{llmSettings\.provider/);
+});
+
+test("llm settings normalization restores Xiaomi defaults for the default provider", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(
+    source,
+    /if \(provider === DEFAULT_LLM_SETTINGS\.provider\) \{\s*return \{\s*\.\.\.DEFAULT_LLM_SETTINGS,\s*enabled: Boolean\(settings\.enabled\),\s*\};\s*\}/,
+  );
+  assert.match(
+    source,
+    /const preset =\s*LLM_PROVIDER_PRESETS\[provider\] \?\? LLM_PROVIDER_PRESETS\.xiaomi/,
+  );
 });
 
 test("dashboard priority gauge avoids clipped fixed widths and hidden point markers", async () => {
@@ -74,6 +105,9 @@ test("analysis tables expose an expand dialog with the full table", async () => 
   assert.match(source, /aria-label="Expand table"/);
   assert.match(source, /max-w-\[min\(72rem,calc\(100vw-2rem\)\)\]/);
   assert.match(source, /max-h-\[min\(42rem,calc\(100vh-2rem\)\)\]/);
+  assert.match(source, /theme === "dark" \? "dark" : ""/);
+  assert.match(source, /<AnalysisChatBox[\s\S]*theme=\{theme\}/);
+  assert.match(source, /<AnalysisMarkdownTable[\s\S]*theme=\{theme\}/);
 });
 
 test("analysis prose renders as readable body copy instead of bolding whole label paragraphs", async () => {
@@ -84,6 +118,19 @@ test("analysis prose renders as readable body copy instead of bolding whole labe
   assert.match(source, /const labelMatch =/);
   assert.match(source, /renderParagraphMarkdown\(block\.text, muted\)/);
   assert.doesNotMatch(source, /block\.emphasis \? "font-medium text-foreground" : "text-foreground\/90"/);
+});
+
+test("analysis chat keeps markdown lists as simple readable lists", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /<ol\s+key=\{index\}/);
+  assert.match(source, /<ul\s+key=\{index\}/);
+  assert.match(source, /list-decimal/);
+  assert.match(source, /renderInlineMarkdown\(item, muted\)/);
+  assert.doesNotMatch(source, /function AnalysisBulletCardList/);
+  assert.doesNotMatch(source, /function AnalysisStepList/);
+  assert.doesNotMatch(source, /data-analysis-card-list/);
+  assert.doesNotMatch(source, /data-analysis-step-list/);
 });
 
 test("dashboard score bars keep the row list and open formula details in a dialog", async () => {

@@ -42,13 +42,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Map as GeoMap, useMap } from "@/components/ui/map";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,6 +49,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import {
   DEFAULT_LLM_SETTINGS,
+  LLM_PROVIDER_PRESETS,
   type LlmSettings,
 } from "@/lib/llm-settings";
 import { parseChatMarkdown, type ChatMarkdownBlock } from "@/lib/chat-markdown";
@@ -143,6 +137,17 @@ type AnalysisInterpretState =
 type AnalysisInterpretResponse = {
   answer?: string;
   error?: string;
+};
+
+type AnalysisPresetQuestion = {
+  label: string;
+  prompt: string;
+};
+
+type AnalysisPresetCategory = {
+  id: string;
+  label: string;
+  questions: AnalysisPresetQuestion[];
 };
 
 type AnalysisReportCard = {
@@ -732,12 +737,112 @@ const ANALYSIS_DASHBOARD_SUMMARY = {
   ],
 };
 
-const ANALYSIS_PRESET_QUESTIONS = [
-  "Is this mainly a transport gap or a service gap? Compare in a table.",
-  "What nearby service, stop and route relationships matter here?",
-  "Give me an actionable intervention priority table.",
-  "Which evidence should be validated before action?",
-];
+const ANALYSIS_PRESET_CATEGORIES = [
+  {
+    id: "priority",
+    label: "Priority",
+    questions: [
+      {
+        label: "Why is this area high priority?",
+        prompt:
+          "What makes this area high priority? Use the selected priority score, hotspot score, score breakdown, typology, dominant drivers, and data confidence.",
+      },
+      {
+        label: "Transport or service gap?",
+        prompt:
+          "Is this more a transport gap or a service gap? Compare PT deficit and essential services deficit in a compact table.",
+      },
+      {
+        label: "Which score driver matters most?",
+        prompt:
+          "Which score driver matters most here? Rank the current score breakdown and explain the planning meaning.",
+      },
+      {
+        label: "Explain this hotspot for planners.",
+        prompt:
+          "Explain this hotspot for planners. Keep it practical and grounded in the selected scores, typology, and caveats.",
+      },
+    ],
+  },
+  {
+    id: "access",
+    label: "Access",
+    questions: [
+      {
+        label: "Which stops and routes matter?",
+        prompt:
+          "Which stops and routes matter here? Use city2graph route and stop dependency evidence when available.",
+      },
+      {
+        label: "Which services are hardest to reach?",
+        prompt:
+          "Which essential services are hardest to reach here? Use nearest healthcare, pharmacy, school, food retail, grocery, and walking-distance evidence when available.",
+      },
+      {
+        label: "Distance or connection problem?",
+        prompt:
+          "Is access limited more by distance or by network connections? Compare service distance, PTAL distance, walking-network distance, detour ratios, and mismatch evidence.",
+      },
+      {
+        label: "What access pattern stands out?",
+        prompt:
+          "What nearby access pattern stands out? Summarize the most important service, stop, route, and walking-network relationships.",
+      },
+    ],
+  },
+  {
+    id: "equity",
+    label: "Equity",
+    questions: [
+      {
+        label: "How does vulnerability affect priority?",
+        prompt:
+          "How does social vulnerability affect this area's priority? Use the vulnerability score and explain how it interacts with access deficits.",
+      },
+      {
+        label: "Does vulnerability overlap with gaps?",
+        prompt:
+          "Does social vulnerability overlap with access gaps here? Compare social vulnerability, PT deficit, and essential services deficit.",
+      },
+      {
+        label: "Is this an equity-first hotspot?",
+        prompt:
+          "Should this be treated as an equity-first hotspot? Ground the answer in vulnerability, accessibility deficits, priority class, and data confidence.",
+      },
+      {
+        label: "Which score shows local need?",
+        prompt:
+          "Which score best signals local need intensity here? Compare the score breakdown and explain the strongest equity-relevant evidence.",
+      },
+    ],
+  },
+  {
+    id: "action",
+    label: "Action",
+    questions: [
+      {
+        label: "What should be done first here?",
+        prompt:
+          "What should be done first here? Recommend the first planning action using dominant drivers, suggested intervention family, and city2graph evidence.",
+      },
+      {
+        label: "Give me a priority action table.",
+        prompt:
+          "Give me a priority action table for this hotspot. Include action, evidence basis, expected benefit, caveat, and next check.",
+      },
+      {
+        label: "What quick wins fit this hotspot?",
+        prompt:
+          "What quick wins fit this hotspot? Focus on realistic service, stop, route, feeder access, and walking-network improvements supported by the evidence.",
+      },
+      {
+        label: "Which intervention type fits best?",
+        prompt:
+          "Which intervention type fits best here? Use the suggested intervention family, dominant drivers, score breakdown, and transit dependency evidence.",
+      },
+    ],
+  },
+] satisfies AnalysisPresetCategory[];
 
 const PTAL_FILL_COLOR = [
   "match",
@@ -1955,13 +2060,28 @@ function readStoredLlmSettings(): LlmSettings {
 
 function normalizeLlmSettings(settings: LlmSettings): LlmSettings {
   const temperature = Number(settings.temperature);
+  const provider = LLM_PROVIDER_PRESETS[settings.provider]
+    ? settings.provider
+    : DEFAULT_LLM_SETTINGS.provider;
+  const preset =
+    LLM_PROVIDER_PRESETS[provider] ?? LLM_PROVIDER_PRESETS.xiaomi;
+
+  if (provider === DEFAULT_LLM_SETTINGS.provider) {
+    return {
+      ...DEFAULT_LLM_SETTINGS,
+      enabled: Boolean(settings.enabled),
+    };
+  }
+
+  const baseUrl = settings.baseUrl.trim() || preset.baseUrl;
+  const model = settings.model.trim() || preset.defaultModel;
 
   return {
     enabled: Boolean(settings.enabled),
-    provider: settings.provider ?? DEFAULT_LLM_SETTINGS.provider,
-    baseUrl: settings.baseUrl,
+    provider,
+    baseUrl,
     apiKey: settings.apiKey,
-    model: settings.model,
+    model,
     temperature: Number.isFinite(temperature)
       ? Math.max(0, Math.min(1, temperature))
       : DEFAULT_LLM_SETTINGS.temperature,
@@ -3423,6 +3543,7 @@ function AnalysisDashboard({
                 className="min-h-0 flex-1"
                 dashboardContext={dashboardContext}
                 llmSettings={llmSettings}
+                theme={theme}
               />
             ) : (
               <AnalysisRecommendationPanel
@@ -4207,13 +4328,18 @@ function AnalysisChatBox({
   className,
   dashboardContext,
   llmSettings,
+  theme,
 }: {
   className?: string;
   dashboardContext: ReturnType<typeof buildAnalysisDashboardContext>;
   llmSettings: LlmSettings;
+  theme: ThemeMode;
 }) {
   const [prompt, setPrompt] = React.useState("");
   const [activePreset, setActivePreset] = React.useState<string>("");
+  const [activePresetCategoryId, setActivePresetCategoryId] = React.useState(
+    ANALYSIS_PRESET_CATEGORIES[0].id,
+  );
   const [showPresets, setShowPresets] = React.useState(false);
   const promptRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = React.useState<AnalysisChatMessage[]>([
@@ -4241,10 +4367,14 @@ function AnalysisChatBox({
   const isStreamingAnswerVisible =
     state.status === "loading" &&
     messages[messages.length - 1]?.role === "assistant";
+  const activePresetCategory =
+    ANALYSIS_PRESET_CATEGORIES.find(
+      (category) => category.id === activePresetCategoryId,
+    ) ?? ANALYSIS_PRESET_CATEGORIES[0];
 
-  const choosePreset = React.useCallback((preset: string) => {
-    setActivePreset(preset);
-    setPrompt(preset);
+  const choosePreset = React.useCallback((preset: AnalysisPresetQuestion) => {
+    setActivePreset(preset.prompt);
+    setPrompt(preset.prompt);
     setShowPresets(false);
     window.requestAnimationFrame(() => promptRef.current?.focus());
   }, []);
@@ -4369,6 +4499,7 @@ function AnalysisChatBox({
                 <ChatMessageContent
                   content={message.content}
                   muted={message.role === "user"}
+                  theme={theme}
                 />
               </div>
             </div>
@@ -4403,19 +4534,41 @@ function AnalysisChatBox({
           />
         </Button>
         {showPresets ? (
-          <div className="grid gap-1.5 border-t p-2">
-            {ANALYSIS_PRESET_QUESTIONS.slice(0, 4).map((preset) => (
-              <Button
-                key={preset}
-                type="button"
-                size="sm"
-                variant={activePreset === preset ? "default" : "secondary"}
-                className="h-auto min-h-9 w-full justify-start rounded-xl px-3 py-2 text-left text-xs leading-5 whitespace-normal"
-                onClick={() => choosePreset(preset)}
-              >
-                {preset}
-              </Button>
-            ))}
+          <div className="grid gap-2 border-t p-2">
+            <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted/60 p-1">
+              {ANALYSIS_PRESET_CATEGORIES.map((category) => (
+                <Button
+                  key={category.id}
+                  type="button"
+                  size="sm"
+                  variant={
+                    activePresetCategory.id === category.id
+                      ? "default"
+                      : "ghost"
+                  }
+                  className="h-7 min-w-0 rounded-lg px-1.5 text-[11px] font-medium"
+                  onClick={() => setActivePresetCategoryId(category.id)}
+                >
+                  <span className="truncate">{category.label}</span>
+                </Button>
+              ))}
+            </div>
+            <div className="grid gap-1.5">
+              {activePresetCategory.questions.map((preset) => (
+                <Button
+                  key={preset.label}
+                  type="button"
+                  size="sm"
+                  variant={
+                    activePreset === preset.prompt ? "default" : "secondary"
+                  }
+                  className="h-auto min-h-9 w-full justify-start rounded-xl px-3 py-2 text-left text-xs leading-5 whitespace-normal"
+                  onClick={() => choosePreset(preset)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
           </div>
         ) : null}
       </div>
@@ -4439,37 +4592,17 @@ function AnalysisChatBox({
           />
         </div>
         <div className="flex min-h-11 items-center gap-2 border-t px-3 py-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="h-8 max-w-[12rem] rounded-full px-2.5 text-[11px] font-medium text-muted-foreground"
-              >
-                <span className="truncate">{activeModel}</span>
-                <ChevronDown className="size-3.5" />
-                <span className="sr-only">Active model</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuLabel>Active model</DropdownMenuLabel>
-              <div className="px-1.5 py-1">
-                <div className="rounded-md bg-muted/60 px-2.5 py-2">
-                  <div className="truncate text-sm font-medium text-foreground">
-                    {activeModel}
-                  </div>
-                  <div className="mt-1 text-xs leading-5 text-muted-foreground">
-                    Configured in Settings
-                  </div>
-                </div>
-              </div>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5 text-xs leading-5 text-muted-foreground">
-                Provider: {llmSettings.provider || DEFAULT_LLM_SETTINGS.provider}
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div
+            data-analysis-active-model
+            className="flex h-8 max-w-[16rem] min-w-0 items-center gap-1.5 rounded-full bg-secondary px-2.5 text-[11px] font-medium text-secondary-foreground"
+            title={`${activeModel} · ${llmSettings.provider || DEFAULT_LLM_SETTINGS.provider}`}
+          >
+            <span className="truncate">{activeModel}</span>
+            <span className="text-muted-foreground">·</span>
+            <span className="truncate text-muted-foreground">
+              {llmSettings.provider || DEFAULT_LLM_SETTINGS.provider}
+            </span>
+          </div>
           <div className="ml-auto flex items-center">
             <Button
               type="button"
@@ -4509,9 +4642,11 @@ function ThinkingIndicator() {
 function ChatMessageContent({
   content,
   muted = false,
+  theme,
 }: {
   content: string;
   muted?: boolean;
+  theme: ThemeMode;
 }) {
   const blocks = parseChatMarkdown(content);
 
@@ -4561,7 +4696,14 @@ function ChatMessageContent({
         }
 
         if (block.type === "table") {
-          return <AnalysisMarkdownTable key={index} block={block} muted={muted} />;
+          return (
+            <AnalysisMarkdownTable
+              key={index}
+              block={block}
+              muted={muted}
+              theme={theme}
+            />
+          );
         }
 
         return (
@@ -4584,9 +4726,11 @@ function ChatMessageContent({
 function AnalysisMarkdownTable({
   block,
   muted = false,
+  theme,
 }: {
   block: ChatMarkdownTableBlock;
   muted?: boolean;
+  theme: ThemeMode;
 }) {
   return (
     <Dialog>
@@ -4611,7 +4755,10 @@ function AnalysisMarkdownTable({
       </DraggableTableScroll>
 
       <DialogContent
-        className="grid max-h-[min(42rem,calc(100vh-2rem))] max-w-[min(72rem,calc(100vw-2rem))] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-[min(72rem,calc(100vw-2rem))]"
+        className={[
+          theme === "dark" ? "dark" : "",
+          "grid max-h-[min(42rem,calc(100vh-2rem))] max-w-[min(72rem,calc(100vw-2rem))] grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:max-w-[min(72rem,calc(100vw-2rem))]",
+        ].join(" ")}
       >
         <DialogHeader className="border-b px-4 py-3 pr-12">
           <DialogTitle>Table</DialogTitle>

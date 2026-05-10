@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const sidebarSourcePath = new URL("../src/components/app-sidebar.tsx", import.meta.url);
+const llmSettingsSourcePath = new URL("../src/lib/llm-settings.ts", import.meta.url);
 const dayLogoPath = new URL("../public/images/day_limen.svg", import.meta.url);
 const nightLogoPath = new URL("../public/images/night_limen.svg", import.meta.url);
 
@@ -32,4 +33,37 @@ test("sidebar reuses the social and services score icons in monochrome style", a
   assert.doesNotMatch(source, /ShieldIcon/);
   assert.doesNotMatch(source, /UserRoundCheckIcon/);
   assert.doesNotMatch(source, /style=\{\{ color:/);
+});
+
+test("sidebar settings use a left-side API provider editor with Xiaomi defaults", async () => {
+  const source = await readFile(sidebarSourcePath, "utf8");
+  const llmSettingsSource = await readFile(llmSettingsSourcePath, "utf8");
+
+  assert.match(source, /<SheetContent[\s\S]*side="left"/);
+  assert.match(source, /API Providers/);
+  assert.doesNotMatch(source, /Add provider/);
+  assert.doesNotMatch(source, /How to configure/);
+  assert.doesNotMatch(source, /PlusIcon/);
+  assert.match(source, /ProviderCard/);
+  assert.match(source, /ProviderEditor/);
+  assert.match(source, /providerIconMap/);
+  assert.match(source, /providerId === DEFAULT_LLM_SETTINGS\.provider/);
+  assert.match(source, /data-readonly-default-provider/);
+  assert.match(source, /isDefaultProvider[\s\S]*readOnly/);
+  assert.match(source, /theme === "dark" \? "dark" : ""/);
+  assert.match(source, /data-\[side=left\]:w-\[min\(100vw,54rem\)\]/);
+  assert.match(source, /grid-cols-\[15rem_minmax\(0,1fr\)\]/);
+  assert.match(
+    source,
+    /providerId === DEFAULT_LLM_SETTINGS\.provider\s*\?\s*\{\s*\.\.\.DEFAULT_LLM_SETTINGS,\s*enabled: true,\s*\}/,
+  );
+  assert.doesNotMatch(source, /<SheetContent side="right"/);
+  assert.match(llmSettingsSource, /export type LlmProviderId =\s*\|\s*"xiaomi"\s*\|\s*"openai"\s*\|\s*"google"\s*\|\s*"openai-compatible"/);
+  assert.doesNotMatch(llmSettingsSource, /"openrouter"/);
+  assert.doesNotMatch(llmSettingsSource, /"deepseek"/);
+  assert.match(llmSettingsSource, /label: "Default"/);
+  assert.match(llmSettingsSource, /description: "Xiaomi Mimo/);
+  assert.match(llmSettingsSource, /https:\/\/token-plan-cn\.xiaomimimo\.com\/v1/);
+  assert.match(llmSettingsSource, /model: "mimo-v2-omni"/);
+  assert.match(llmSettingsSource, /temperature: 0\.1/);
 });

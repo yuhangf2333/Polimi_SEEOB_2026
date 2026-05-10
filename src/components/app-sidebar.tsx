@@ -3,20 +3,26 @@
 import * as React from "react"
 import Image from "next/image"
 import {
+  BadgeCheckIcon,
+  BotIcon,
+  BracesIcon,
   GaugeIcon,
   HandHeartIcon,
   MoonIcon,
   SatelliteIcon,
   SettingsIcon,
+  SparklesIcon,
   SunIcon,
   TramFrontIcon,
   UsersRoundIcon,
+  type LucideIcon,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { NavMain } from "@/components/nav-main"
 import {
+  DEFAULT_LLM_SETTINGS,
   LLM_PROVIDER_PRESETS,
   type LlmProviderId,
   type LlmSettings,
@@ -72,18 +78,319 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 
 const COMMON_LLM_MODEL_OPTIONS = [
   "mimo-v2-omni",
+  "gpt-5-mini",
   "gpt-4o-mini",
   "gpt-4o",
   "gpt-4.1-mini",
-  "gpt-4.1",
-  "o4-mini",
-  "deepseek-chat",
-  "qwen-plus",
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "use-custom-model",
 ]
 
 const LLM_PROVIDER_OPTIONS = Object.entries(LLM_PROVIDER_PRESETS) as Array<
   [LlmProviderId, (typeof LLM_PROVIDER_PRESETS)[LlmProviderId]]
 >
+
+type ConnectionStatus = "idle" | "testing" | "success" | "error"
+
+const providerIconMap: Record<LlmProviderId, LucideIcon> = {
+  xiaomi: BadgeCheckIcon,
+  openai: BotIcon,
+  google: SparklesIcon,
+  "openai-compatible": BracesIcon,
+}
+
+function ProviderCard({
+  providerId,
+  label,
+  description,
+  active,
+  enabled,
+  onSelect,
+  onEnabledChange,
+}: {
+  providerId: LlmProviderId
+  label: string
+  description: string
+  active: boolean
+  enabled: boolean
+  onSelect: (providerId: LlmProviderId) => void
+  onEnabledChange: (enabled: boolean) => void
+}) {
+  const ProviderIcon = providerIconMap[providerId]
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return
+    event.preventDefault()
+    onSelect(providerId)
+  }
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      data-provider-card={providerId}
+      className={[
+        "relative flex w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg border bg-card px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        active
+          ? "border-primary bg-primary/5 text-foreground dark:bg-primary/10"
+          : "border-border text-foreground hover:bg-muted/60 dark:hover:bg-muted/30",
+      ].join(" ")}
+      onClick={() => onSelect(providerId)}
+      onKeyDown={handleKeyDown}
+    >
+      <span className="flex min-w-0 items-center gap-2.5">
+        <span
+          className={[
+            "grid size-7 shrink-0 place-items-center rounded-full border",
+            active
+              ? "border-primary/30 bg-primary text-primary-foreground"
+              : "border-border bg-muted text-muted-foreground",
+          ].join(" ")}
+        >
+          <ProviderIcon className="size-3.5" aria-hidden="true" />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-medium">{label}</span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {description}
+          </span>
+        </span>
+      </span>
+      <Switch
+        checked={active && enabled}
+        onCheckedChange={onEnabledChange}
+        onClick={(event) => event.stopPropagation()}
+      />
+    </div>
+  )
+}
+
+function ProviderEditor({
+  llmSettings,
+  visibleModelOptions,
+  connectionStatus,
+  connectionMessage,
+  onLlmSettingsChange,
+  onTestConnection,
+}: {
+  llmSettings: LlmSettings
+  visibleModelOptions: string[]
+  connectionStatus: ConnectionStatus
+  connectionMessage: string
+  onLlmSettingsChange: (settings: LlmSettings) => void
+  onTestConnection: () => void
+}) {
+  const providerPreset =
+    LLM_PROVIDER_PRESETS[llmSettings.provider] ?? LLM_PROVIDER_PRESETS.xiaomi
+  const providerId = llmSettings.provider
+  const isDefaultProvider = providerId === DEFAULT_LLM_SETTINGS.provider
+
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col rounded-lg border bg-card p-3 text-card-foreground"
+      data-readonly-default-provider={isDefaultProvider ? "true" : undefined}
+    >
+      <div className="mb-3 min-w-0">
+        <div className="text-base font-semibold">{providerPreset.label}</div>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+          {providerPreset.description}
+        </p>
+      </div>
+
+      <div className="grid min-h-0 gap-3 overflow-y-auto pr-1">
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2 dark:bg-muted/25">
+          <div>
+            <div className="text-sm font-medium">Enable AI</div>
+            <div className="text-xs text-muted-foreground">
+              Shows the dashboard chatbox in Analysis.
+            </div>
+          </div>
+          <Switch
+            checked={llmSettings.enabled}
+            onCheckedChange={(enabled) =>
+              onLlmSettingsChange({
+                ...llmSettings,
+                enabled,
+              })
+            }
+          />
+        </div>
+
+        <div className="grid gap-1.5">
+          <label className="text-sm font-medium">Name</label>
+          <Input value={providerPreset.label} readOnly disabled={isDefaultProvider} />
+        </div>
+
+        <div className="grid gap-1.5">
+          <label className="text-sm font-medium">Description</label>
+          <Input
+            value={providerPreset.description}
+            readOnly
+            disabled={isDefaultProvider}
+          />
+        </div>
+
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-medium">API Key</label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onTestConnection}
+              disabled={
+                isDefaultProvider ||
+                connectionStatus === "testing" ||
+                !llmSettings.baseUrl.trim()
+              }
+            >
+              {connectionStatus === "testing" ? "Testing" : "Test connection"}
+            </Button>
+          </div>
+          <Input
+            type="password"
+            value={llmSettings.apiKey}
+            placeholder={
+              isDefaultProvider ? "Built-in server default" : "Server configured"
+            }
+            readOnly={isDefaultProvider}
+            disabled={isDefaultProvider}
+            onChange={(event) =>
+              onLlmSettingsChange({
+                ...llmSettings,
+                apiKey: event.target.value,
+              })
+            }
+          />
+          {connectionMessage ? (
+            <p
+              className={
+                connectionStatus === "error"
+                  ? "text-xs leading-5 text-destructive"
+                  : "text-xs leading-5 text-muted-foreground"
+              }
+            >
+              {connectionMessage}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid gap-1.5">
+          <label className="text-sm font-medium">Base URL</label>
+          <Input
+            value={llmSettings.baseUrl}
+            placeholder={providerPreset.baseUrl}
+            readOnly={isDefaultProvider}
+            disabled={isDefaultProvider}
+            onChange={(event) =>
+              onLlmSettingsChange({
+                ...llmSettings,
+                baseUrl: event.target.value,
+              })
+            }
+          />
+        </div>
+
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-medium">Model</label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onTestConnection}
+              disabled={
+                isDefaultProvider ||
+                connectionStatus === "testing" ||
+                !llmSettings.baseUrl.trim()
+              }
+            >
+              Models
+            </Button>
+          </div>
+          {isDefaultProvider ? (
+            <Input value={llmSettings.model} readOnly disabled />
+          ) : (
+            <>
+              <Select
+                value={llmSettings.model}
+                onValueChange={(model) =>
+                  onLlmSettingsChange({
+                    ...llmSettings,
+                    model,
+                  })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {visibleModelOptions.map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <Input
+                value={llmSettings.model}
+                placeholder="Input custom model name"
+                onChange={(event) =>
+                  onLlmSettingsChange({
+                    ...llmSettings,
+                    model: event.target.value,
+                  })
+                }
+              />
+            </>
+          )}
+        </div>
+
+        <div className="grid gap-1.5">
+          <label className="text-sm font-medium">Temperature</label>
+          <Input
+            type="number"
+            min={0}
+            max={1}
+            step={0.1}
+            value={llmSettings.temperature}
+            readOnly={isDefaultProvider}
+            disabled={isDefaultProvider}
+            onChange={(event) =>
+              onLlmSettingsChange({
+                ...llmSettings,
+                temperature: Number(event.target.value),
+              })
+            }
+          />
+        </div>
+
+        <details className="group rounded-lg border px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium">
+            Feature provider
+          </summary>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            Analysis chat uses this provider for dashboard interpretation.
+          </p>
+        </details>
+
+        <details className="group rounded-lg border px-3 py-2">
+          <summary className="cursor-pointer text-sm font-medium">
+            Advanced options
+          </summary>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            {isDefaultProvider
+              ? "Default uses the built-in Xiaomi configuration and cannot be edited here."
+              : "Leave the key empty to use the server-configured credential. A browser key overrides it only for this local dashboard."}
+          </p>
+        </details>
+      </div>
+    </div>
+  )
+}
 
 export function AppSidebar({
   activeId,
@@ -96,26 +403,61 @@ export function AppSidebar({
   onLlmSettingsChange,
   ...props
 }: AppSidebarProps) {
+  const initialProviderPreset =
+    LLM_PROVIDER_PRESETS[llmSettings.provider] ?? LLM_PROVIDER_PRESETS.xiaomi
   const [modelOptions, setModelOptions] = React.useState<string[]>(
-    COMMON_LLM_MODEL_OPTIONS,
+    initialProviderPreset.modelOptions,
   )
-  const [connectionStatus, setConnectionStatus] = React.useState<
-    "idle" | "testing" | "success" | "error"
-  >("idle")
+  const [connectionStatus, setConnectionStatus] =
+    React.useState<ConnectionStatus>("idle")
   const [connectionMessage, setConnectionMessage] = React.useState("")
+  const activeProviderPreset =
+    LLM_PROVIDER_PRESETS[llmSettings.provider] ?? LLM_PROVIDER_PRESETS.xiaomi
   const visibleModelOptions = React.useMemo(
     () =>
       Array.from(
         new Set(
-          [llmSettings.model, ...modelOptions, ...COMMON_LLM_MODEL_OPTIONS]
+          [
+            llmSettings.model,
+            ...modelOptions,
+            ...activeProviderPreset.modelOptions,
+            ...COMMON_LLM_MODEL_OPTIONS,
+          ]
             .map((model) => model.trim())
             .filter(Boolean),
         ),
       ),
-    [llmSettings.model, modelOptions],
+    [activeProviderPreset.modelOptions, llmSettings.model, modelOptions],
   )
   const logoSrc =
     theme === "dark" ? "/images/night_limen.svg" : "/images/day_limen.svg"
+
+  const selectLlmProvider = React.useCallback(
+    (providerId: LlmProviderId) => {
+      const preset = LLM_PROVIDER_PRESETS[providerId]
+
+      setModelOptions(preset.modelOptions)
+      setConnectionStatus("idle")
+      setConnectionMessage("")
+      const nextSettings =
+        providerId === DEFAULT_LLM_SETTINGS.provider
+          ? {
+              ...DEFAULT_LLM_SETTINGS,
+              enabled: true,
+            }
+          : {
+              ...llmSettings,
+              enabled: true,
+              provider: providerId,
+              baseUrl: preset.baseUrl,
+              model: preset.defaultModel,
+              temperature: llmSettings.temperature,
+            }
+
+      onLlmSettingsChange(nextSettings)
+    },
+    [llmSettings, onLlmSettingsChange],
+  )
 
   const testLlmConnection = React.useCallback(async () => {
     setConnectionStatus("testing")
@@ -418,185 +760,55 @@ export function AppSidebar({
                   <span className="sr-only">Settings</span>
                 </SidebarMenuButton>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[360px] sm:max-w-[360px]">
-                <SheetHeader>
-                  <SheetTitle>Settings</SheetTitle>
+              <SheetContent
+                side="left"
+                className={[
+                  theme === "dark" ? "dark" : "",
+                  "gap-0 p-0 data-[side=left]:w-[min(100vw,54rem)] data-[side=left]:sm:max-w-[54rem]",
+                ].join(" ")}
+              >
+                <SheetHeader className="border-b px-4 py-4">
+                  <SheetTitle>API Providers</SheetTitle>
                   <SheetDescription>
-                    Configure a provider, base URL, API key and model for the
-                    analysis chatbox.
+                    Configure the OpenAI-compatible provider used by the
+                    Analysis chatbox.
                   </SheetDescription>
                 </SheetHeader>
-                <div className="flex flex-col gap-4 px-4">
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2">
-                    <div>
-                      <div className="text-sm font-medium">Enable AI</div>
-                      <div className="text-xs text-muted-foreground">
-                        Shows the dashboard chatbox in Analysis.
-                      </div>
-                    </div>
-                    <Switch
-                      checked={llmSettings.enabled}
-                      onCheckedChange={(enabled) =>
-                        onLlmSettingsChange({
-                          ...llmSettings,
-                          enabled,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Provider
-                    </label>
-                    <Select
-                      value={llmSettings.provider}
-                      onValueChange={(provider) => {
-                        const providerId = provider as LlmProviderId
-                        const preset = LLM_PROVIDER_PRESETS[providerId]
+                <div className="grid min-h-0 flex-1 grid-cols-[15rem_minmax(0,1fr)] gap-4 overflow-hidden p-4 max-md:grid-cols-1">
+                  <div className="flex min-h-0 flex-col gap-3">
+                    <div className="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
+                      {LLM_PROVIDER_OPTIONS.map(([providerId, preset]) => (
+                        <ProviderCard
+                          key={providerId}
+                          providerId={providerId}
+                          label={preset.label}
+                          description={preset.description}
+                          active={llmSettings.provider === providerId}
+                          enabled={llmSettings.enabled}
+                          onSelect={selectLlmProvider}
+                          onEnabledChange={(enabled) => {
+                            if (llmSettings.provider !== providerId) {
+                              selectLlmProvider(providerId)
+                              return
+                            }
 
-                        onLlmSettingsChange({
-                          ...llmSettings,
-                          provider: providerId,
-                          baseUrl: preset.baseUrl,
-                          model: preset.defaultModel,
-                        })
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {LLM_PROVIDER_OPTIONS.map(([id, preset]) => (
-                            <SelectItem key={id} value={id}>
-                              {preset.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Base URL
-                    </label>
-                    <Input
-                      value={llmSettings.baseUrl}
-                      placeholder="https://api.openai.com/v1"
-                      onChange={(event) =>
-                        onLlmSettingsChange({
-                          ...llmSettings,
-                          provider: "openai-compatible",
-                          baseUrl: event.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Model
-                    </label>
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                      <Select
-                        value={llmSettings.model}
-                        onValueChange={(model) =>
-                          onLlmSettingsChange({
-                            ...llmSettings,
-                            model,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {visibleModelOptions.map((model) => (
-                              <SelectItem key={model} value={model}>
-                                {model}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={testLlmConnection}
-                        disabled={
-                          connectionStatus === "testing" ||
-                          !llmSettings.baseUrl.trim()
-                        }
-                      >
-                        {connectionStatus === "testing" ? "Loading" : "Models"}
-                      </Button>
+                            onLlmSettingsChange({
+                              ...llmSettings,
+                              enabled,
+                            })
+                          }}
+                        />
+                      ))}
                     </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      API key
-                    </label>
-                    <Input
-                      type="password"
-                      value={llmSettings.apiKey}
-                      placeholder="Server configured"
-                      onChange={(event) =>
-                        onLlmSettingsChange({
-                          ...llmSettings,
-                          apiKey: event.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Temperature
-                    </label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={1}
-                      step={0.1}
-                      value={llmSettings.temperature}
-                      onChange={(event) =>
-                        onLlmSettingsChange({
-                          ...llmSettings,
-                          temperature: Number(event.target.value),
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        onLlmSettingsChange({
-                          ...llmSettings,
-                          provider: "openai",
-                          baseUrl: LLM_PROVIDER_PRESETS.openai.baseUrl,
-                          model: llmSettings.model || LLM_PROVIDER_PRESETS.openai.defaultModel,
-                        })
-                      }
-                    >
-                      OpenAI default
-                    </Button>
-                  </div>
-                  {connectionMessage ? (
-                    <p
-                      className={
-                        connectionStatus === "error"
-                          ? "text-xs leading-5 text-destructive"
-                          : "text-xs leading-5 text-muted-foreground"
-                      }
-                    >
-                      {connectionMessage}
-                    </p>
-                  ) : null}
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    Leave the key empty to use the server-configured credential.
-                    A browser key overrides it only for this local dashboard.
-                  </p>
+                  <ProviderEditor
+                    llmSettings={llmSettings}
+                    visibleModelOptions={visibleModelOptions}
+                    connectionStatus={connectionStatus}
+                    connectionMessage={connectionMessage}
+                    onLlmSettingsChange={onLlmSettingsChange}
+                    onTestConnection={testLlmConnection}
+                  />
                 </div>
               </SheetContent>
             </Sheet>
