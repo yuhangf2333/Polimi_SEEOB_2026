@@ -92,6 +92,7 @@ const LLM_PROVIDER_OPTIONS = Object.entries(LLM_PROVIDER_PRESETS) as Array<
 >
 
 type ConnectionStatus = "idle" | "testing" | "success" | "error"
+type ModelOptionsSource = "preset" | "remote"
 
 const providerIconMap: Record<LlmProviderId, LucideIcon> = {
   xiaomi: BadgeCheckIcon,
@@ -408,27 +409,37 @@ export function AppSidebar({
   const [modelOptions, setModelOptions] = React.useState<string[]>(
     initialProviderPreset.modelOptions,
   )
+  const [modelOptionsSource, setModelOptionsSource] =
+    React.useState<ModelOptionsSource>("preset")
   const [connectionStatus, setConnectionStatus] =
     React.useState<ConnectionStatus>("idle")
   const [connectionMessage, setConnectionMessage] = React.useState("")
   const activeProviderPreset =
     LLM_PROVIDER_PRESETS[llmSettings.provider] ?? LLM_PROVIDER_PRESETS.xiaomi
-  const visibleModelOptions = React.useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [
-            llmSettings.model,
+  const visibleModelOptions = React.useMemo(() => {
+    const sourceModels =
+      modelOptionsSource === "remote"
+        ? modelOptions
+        : [
             ...modelOptions,
             ...activeProviderPreset.modelOptions,
             ...COMMON_LLM_MODEL_OPTIONS,
           ]
-            .map((model) => model.trim())
-            .filter(Boolean),
-        ),
-      ),
-    [activeProviderPreset.modelOptions, llmSettings.model, modelOptions],
-  )
+
+    const models =
+      modelOptionsSource === "remote" && modelOptions.includes(llmSettings.model)
+        ? sourceModels
+        : [llmSettings.model, ...sourceModels]
+
+    return Array.from(
+      new Set(models.map((model) => model.trim()).filter(Boolean)),
+    )
+  }, [
+    activeProviderPreset.modelOptions,
+    llmSettings.model,
+    modelOptions,
+    modelOptionsSource,
+  ])
   const logoSrc =
     theme === "dark" ? "/images/night_limen.svg" : "/images/day_limen.svg"
 
@@ -437,6 +448,7 @@ export function AppSidebar({
       const preset = LLM_PROVIDER_PRESETS[providerId]
 
       setModelOptions(preset.modelOptions)
+      setModelOptionsSource("preset")
       setConnectionStatus("idle")
       setConnectionMessage("")
       const nextSettings =
@@ -486,6 +498,7 @@ export function AppSidebar({
         ? data.models
         : COMMON_LLM_MODEL_OPTIONS
       setModelOptions(nextModels)
+      setModelOptionsSource(data.models?.length ? "remote" : "preset")
       setConnectionStatus("success")
       setConnectionMessage(`${nextModels.length} models available`)
 

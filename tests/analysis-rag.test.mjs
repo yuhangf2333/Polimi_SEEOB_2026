@@ -91,6 +91,49 @@ test("retrieveAnalysisKnowledge includes selected dashboard signals for local qu
   assert.match(result.contextText, /Target essential service access/i);
 });
 
+test("retrieveAnalysisKnowledge prefers table answers for local planning questions", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question: "What should be done first in this selected area?",
+    context: {
+      scores: {
+        intervention_priority_score: 56,
+        hotspot_score: 55,
+        data_confidence_score: 87,
+      },
+      diagnosis: {
+        dominant_drivers: "essential services deficit; public transport deficit",
+        suggested_intervention_family:
+          "Monitor service quality and interchange conditions.",
+      },
+    },
+    limit: 4,
+  });
+
+  assert.equal(result.responseGuide.mode, "intervention");
+  assert.ok(result.responseGuide.structure.some((item) => /table/i.test(item)));
+  assert.match(result.responseGuide.tablePreference, /markdown intervention table/i);
+});
+
+test("retrieveAnalysisKnowledge keeps comparison questions on table format", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question: "Compare transport and service gaps in a table.",
+    context: {
+      score_breakdown: {
+        "PTAL deficit": 66,
+        "Essential services deficit": 71,
+      },
+    },
+    limit: 4,
+  });
+
+  assert.equal(result.responseGuide.mode, "comparison");
+  assert.match(result.responseGuide.tablePreference, /comparison table/i);
+});
+
 test("retrieveAnalysisKnowledge finds nearest walking-access knowledge for local relationship questions", async () => {
   const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
 

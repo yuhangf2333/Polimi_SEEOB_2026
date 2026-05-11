@@ -18,6 +18,20 @@ const DATA_FILES = {
   ptal: "data/geojson/ptal/ptal_4_8_h3_100m_gtfs_netex_fast.geojson.gz",
 };
 
+const FORMULA_DATA_KEYS = {
+  svi_score: ["analysisRecords", "vulnerabilityRecords"],
+  pt_deficit_score: ["analysisRecords", "ptalRecords"],
+  essential_services_deficit_score: ["analysisRecords", "serviceRecords"],
+  eo_territorial_disadvantage_score: ["analysisRecords"],
+};
+
+const DATA_KEY_FILES = {
+  analysisRecords: DATA_FILES.analysis,
+  vulnerabilityRecords: DATA_FILES.vulnerability,
+  serviceRecords: DATA_FILES.services,
+  ptalRecords: DATA_FILES.ptal,
+};
+
 const FORMULA_SOURCES = [
   "6666/final_result/webgis_data/tp_ipt_final/outputs/reports/final_scoring_methodology.md",
   "6666/final_result/source_methods_and_metrics/Social Vulnerability Index/docs/sources/vulnerability_method_2023.md",
@@ -100,25 +114,41 @@ const EO_COMPONENTS = [
 
 let cachedFormulaData = null;
 
-export function loadScoreFormulaData(root = process.cwd()) {
-  if (cachedFormulaData?.root === root) {
-    return cachedFormulaData.data;
+export function loadScoreFormulaData(root = process.cwd(), metricKey) {
+  if (cachedFormulaData?.root !== root) {
+    cachedFormulaData = { root, data: {} };
   }
 
-  const data = {
-    analysisRecords: readGeojsonProperties(root, DATA_FILES.analysis),
-    vulnerabilityRecords: readGeojsonProperties(root, DATA_FILES.vulnerability),
-    serviceRecords: readGeojsonProperties(root, DATA_FILES.services),
-    ptalRecords: readGeojsonProperties(root, DATA_FILES.ptal),
-  };
+  const data = cachedFormulaData.data;
+  for (const dataKey of formulaDataKeys(metricKey)) {
+    if (!data[dataKey]) {
+      data[dataKey] = readGeojsonProperties(root, DATA_KEY_FILES[dataKey]);
+    }
+  }
 
-  cachedFormulaData = { root, data };
-  return data;
+  return {
+    analysisRecords: data.analysisRecords ?? [],
+    vulnerabilityRecords: data.vulnerabilityRecords ?? [],
+    serviceRecords: data.serviceRecords ?? [],
+    ptalRecords: data.ptalRecords ?? [],
+  };
 }
 
-export function getScoreFormulaDetails({ h3Id, metricKey } = {}) {
-  const data = loadScoreFormulaData();
+/**
+ * @param {{ root?: string, h3Id?: string, metricKey?: string }} [options]
+ */
+export function getScoreFormulaDetails(options = {}) {
+  const { root = process.cwd(), h3Id, metricKey } = options;
+  const data = loadScoreFormulaData(root, metricKey);
   return buildScoreFormulaDetails({ ...data, h3Id, metricKey });
+}
+
+function formulaDataKeys(metricKey) {
+  if (metricKey) {
+    return FORMULA_DATA_KEYS[metricKey] ?? ["analysisRecords"];
+  }
+
+  return Array.from(new Set(Object.values(FORMULA_DATA_KEYS).flat()));
 }
 
 export function buildScoreFormulaDetails({

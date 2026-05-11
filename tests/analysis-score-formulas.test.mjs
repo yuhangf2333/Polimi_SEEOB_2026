@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { gzipSync } from "node:zlib";
 
 import {
   buildScoreFormulaDetails,
+  getScoreFormulaDetails,
   SCORE_FORMULA_KEYS,
 } from "../src/lib/analysis-score-formulas.mjs";
 
@@ -18,6 +23,20 @@ function roundedTotal(metric) {
       .reduce((sum, term) => sum + (term.contribution ?? 0), 0)
       .toFixed(6),
   );
+}
+
+async function writeGeojson(root, relativePath, propertiesRows) {
+  const filePath = path.join(root, relativePath);
+  await mkdir(path.dirname(filePath), { recursive: true });
+  const payload = {
+    type: "FeatureCollection",
+    features: propertiesRows.map((properties) => ({
+      type: "Feature",
+      properties,
+      geometry: null,
+    })),
+  };
+  await writeFile(filePath, gzipSync(JSON.stringify(payload)));
 }
 
 test("score formula details expose dashboard metric keys", () => {
@@ -86,6 +105,41 @@ test("essential service deficit sums equal weighted service deficits", () => {
     metric.terms.map((term) => term.contribution),
     [20, 15, 10, 25],
   );
+});
+
+test("single-metric formula requests do not require unrelated source files", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "score-formula-"));
+
+  try {
+    await writeGeojson(root, "data/geojson/analysis/tp_ipt_analysis_h3_res9.geojson.gz", [
+      {
+        h3_id: "abc",
+        essential_services_deficit_score: 60,
+        healthcare_deficit_score: 80,
+        school_deficit_score: 40,
+        jobs_deficit_score: 60,
+        grocery_deficit_score: 60,
+      },
+    ]);
+    await writeGeojson(root, "data/geojson/services/essential_services_accessibility_h3_res9_fast.geojson.gz", [
+      {
+        h3_id: "abc",
+        essential_services_accessibility_index: 0.4,
+      },
+    ]);
+
+    const details = getScoreFormulaDetails({
+      root,
+      h3Id: "abc",
+      metricKey: "essential_services_deficit_score",
+    });
+
+    assert.equal(details.metrics.length, 1);
+    assert.equal(details.scope.h3Id, "abc");
+    assert.equal(details.metrics[0].value, 60);
+  } finally {
+    await rm(root, { force: true, recursive: true });
+  }
 });
 
 test("eo territorial disadvantage sums weighted EO sub-scores", () => {

@@ -3475,12 +3475,24 @@ function AnalysisDashboard({
     [breakdown, confidenceScore, hotspotScore, priorityScore, selectedFeature],
   );
   const priorityStatus = priorityState(priorityScore);
-  const recommendationItems = buildHumanRecommendationItems({
-    breakdown,
-    confidenceScore,
-    hotspotScore,
-    priorityScore,
-  });
+  const evidenceRows = React.useMemo(
+    () =>
+      breakdown
+        .filter((item) => item.key !== "data_confidence_score")
+        .toSorted((a, b) => b.value - a.value)
+        .slice(0, 4),
+    [breakdown],
+  );
+  const recommendationItems = React.useMemo(
+    () =>
+      buildHumanRecommendationItems({
+        breakdown,
+        confidenceScore,
+        hotspotScore,
+        priorityScore,
+      }),
+    [breakdown, confidenceScore, hotspotScore, priorityScore],
+  );
   const reportPayload = {
     context: dashboardContext,
     priorityScore,
@@ -3546,9 +3558,10 @@ function AnalysisDashboard({
                 theme={theme}
               />
             ) : (
-              <AnalysisRecommendationPanel
+              <AnalysisDecisionSupportPanel
                 className="min-h-0 flex-1"
-                items={recommendationItems}
+                evidenceRows={evidenceRows}
+                recommendationItems={recommendationItems}
                 onExport={() => {
                   void exportAnalysisReport(reportPayload);
                 }}
@@ -3628,49 +3641,86 @@ function AnalysisPrioritySummary({
   );
 }
 
-function AnalysisRecommendationPanel({
+function AnalysisDecisionSupportPanel({
   className,
-  items,
+  evidenceRows,
+  recommendationItems,
   onExport,
 }: {
   className?: string;
-  items: string[];
+  evidenceRows: Array<{ key: string; label: string; value: number; color: string }>;
+  recommendationItems: string[];
   onExport: () => void;
 }) {
+  const typologyRows = React.useMemo(
+    () => buildAnalysisTypologyRows(evidenceRows),
+    [evidenceRows],
+  );
+  const interventionFamilies = React.useMemo(
+    () => buildAnalysisInterventionFamilies(evidenceRows),
+    [evidenceRows],
+  );
+
   return (
-    <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/75 p-4", className)}>
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/15 text-yellow-500 dark:bg-yellow-400/10 dark:text-yellow-300">
-          <Lightbulb className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <div className="truncate text-base font-semibold">
-            Recommendation
+    <div className={cn("flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/75 p-3", className)}>
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-yellow-400/15 text-yellow-500 dark:bg-yellow-400/10 dark:text-yellow-300">
+            <Lightbulb className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <div className="text-base font-semibold leading-5">
+              Decision support
+            </div>
           </div>
         </div>
       </div>
 
       <ScrollArea className="mt-3 min-h-0 flex-1">
-        <ul className="flex flex-col gap-2.5 pr-3 text-sm leading-5 text-muted-foreground">
-          {items.map((item, index) => (
-            <li
-              key={item}
-              className="grid grid-cols-[1.55rem_minmax(0,1fr)] gap-2.5 rounded-xl bg-muted/35 px-3 py-2.5"
-            >
-              <span className="flex size-6 items-center justify-center rounded-full bg-background text-xs font-semibold text-foreground ring-1 ring-border/60">
-                {index + 1}
-              </span>
-              <span className="pt-1">{item}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="flex min-h-full flex-col justify-between gap-4 pr-3">
+          <section className="rounded-xl bg-muted/30 p-2.5">
+            <AnalysisTypologyDonut rows={typologyRows} />
+          </section>
+
+          <section>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-foreground">
+                Intervention families
+              </div>
+            </div>
+            <div className="grid gap-2">
+              {interventionFamilies.map((item) => (
+                <AnalysisInterventionFamilyRow key={item.label} item={item} />
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-2 text-sm font-semibold text-foreground">
+              Recommendation
+            </div>
+            <ul className="grid gap-2">
+              {recommendationItems.map((item, index) => (
+                <li
+                  key={item}
+                  className="grid grid-cols-[1.55rem_minmax(0,1fr)] gap-2.5 rounded-xl bg-muted/35 px-3 py-2.5 text-sm leading-5 text-muted-foreground"
+                >
+                  <span className="flex size-6 items-center justify-center rounded-full bg-background text-xs font-semibold text-foreground ring-1 ring-border/60">
+                    {index + 1}
+                  </span>
+                  <span className="break-words pt-1">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       </ScrollArea>
 
       <Button
         type="button"
         size="default"
         variant="secondary"
-        className="mt-3 w-fit px-4"
+        className="mt-2 w-fit px-4"
         onClick={onExport}
       >
         <FileText data-icon="inline-start" />
@@ -3680,34 +3730,154 @@ function AnalysisRecommendationPanel({
   );
 }
 
-function findLayer(groups: MilanLayerGroup[], id: string) {
-  return groups.flatMap((group) => group.layers).find((layer) => layer.id === id) ?? null;
+function AnalysisTypologyDonut({
+  rows,
+}: {
+  rows: Array<{ label: string; value: number; color: string }>;
+}) {
+  const gradientStops = rows
+    .reduce(
+      (acc, row) => {
+        const start = acc.cursor;
+        const end = start + row.value;
+
+        return {
+          cursor: end,
+          stops: [
+            ...acc.stops,
+            `${row.color} ${start.toFixed(1)}% ${end.toFixed(1)}%`,
+          ],
+        };
+      },
+      { cursor: 0, stops: [] as string[] },
+    )
+    .stops.join(", ");
+
+  return (
+    <div className="grid h-full items-center gap-3 sm:grid-cols-[7.25rem_minmax(0,1fr)]">
+      <div className="relative mx-auto flex size-24 shrink-0 items-center justify-center rounded-full ring-1 ring-border/70">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 rounded-full"
+          style={{ background: `conic-gradient(${gradientStops})` }}
+        />
+        <div className="relative flex size-12 flex-col items-center justify-center rounded-full bg-background text-center ring-1 ring-border/70">
+          <span className="text-base font-semibold tabular-nums">
+            {Math.round(rows[0]?.value ?? 0)}%
+          </span>
+        </div>
+      </div>
+      <div className="grid gap-2">
+        {rows.map((row) => (
+          <div key={row.label} className="grid grid-cols-[0.75rem_minmax(0,1fr)_2.75rem] items-start gap-2 text-sm">
+            <span
+              className="mt-1 size-2.5 rounded-full"
+              style={{ backgroundColor: row.color }}
+              aria-hidden="true"
+            />
+            <div className="min-w-0">
+              <div className="break-words font-medium leading-5">{row.label}</div>
+            </div>
+            <span className="text-right text-xs font-semibold tabular-nums text-muted-foreground">
+              {Math.round(row.value)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function analysisNumber(
-  properties: GeoJSON.GeoJsonProperties | null,
-  key: string,
-  fallback: number,
+function AnalysisInterventionFamilyRow({
+  item,
+}: {
+  item: ReturnType<typeof buildAnalysisInterventionFamilies>[number];
+}) {
+  const Icon = item.icon;
+
+  return (
+    <div className="grid grid-cols-[1.75rem_minmax(0,1fr)_auto] items-start gap-2 rounded-xl bg-muted/25 px-2.5 py-2">
+      <span
+        className="flex size-7 items-center justify-center rounded-lg text-background"
+        style={{ backgroundColor: item.color }}
+      >
+        <Icon className="size-3.5" />
+      </span>
+      <div className="min-w-0">
+        <div className="break-words text-sm font-medium leading-5">{item.label}</div>
+      </div>
+      <Badge variant={item.match === "Primary" ? "default" : "secondary"}>
+        {item.match}
+      </Badge>
+    </div>
+  );
+}
+
+function buildAnalysisTypologyRows(
+  evidenceRows: Array<{ key: string; label: string; value: number; color: string }>,
 ) {
-  const value = properties?.[key];
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const numericValue = Number(value);
-    if (Number.isFinite(numericValue)) return numericValue;
+  const labelByKey: Record<string, string> = {
+    pt_deficit_score: "PT gap + low access",
+    essential_services_deficit_score: "Service desert pressure",
+    svi_score: "Vulnerable concentration",
+    eo_territorial_disadvantage_score: "Territorial isolation",
+  };
+  const total = evidenceRows.reduce((sum, row) => sum + Math.max(1, row.value), 0);
+
+  if (total <= 0) {
+    return evidenceRows.map((row) => ({
+      label: labelByKey[row.key] ?? row.label,
+      value: 25,
+      color: row.color,
+    }));
   }
 
-  return fallback;
+  return evidenceRows.map((row) => ({
+    label: labelByKey[row.key] ?? row.label,
+    value: (Math.max(1, row.value) / total) * 100,
+    color: row.color,
+  }));
 }
 
-function analysisText(
-  properties: GeoJSON.GeoJsonProperties | null,
-  key: string,
-  fallback = "Citywide baseline",
+function buildAnalysisInterventionFamilies(
+  evidenceRows: Array<{ key: string; label: string; value: number; color: string }>,
 ) {
-  const value = properties?.[key];
-  if (typeof value === "string" && value.trim()) return value;
-  if (typeof value === "number") return String(value);
-  return fallback;
+  const topKey = evidenceRows[0]?.key;
+  const valueByKey = new Map(evidenceRows.map((row) => [row.key, row.value]));
+  const familyRows = [
+    {
+      key: "pt_deficit_score",
+      label: "Improve PT frequency & first/last mile",
+      icon: TramFront,
+      color: "#2563eb",
+    },
+    {
+      key: "essential_services_deficit_score",
+      label: "Expand essential services access",
+      icon: HandHeart,
+      color: "#10b981",
+    },
+    {
+      key: "svi_score",
+      label: "Equity safeguards and local validation",
+      icon: UsersRound,
+      color: "#f97316",
+    },
+    {
+      key: "eo_territorial_disadvantage_score",
+      label: "Spatial design feasibility",
+      icon: Satellite,
+      color: "#8b5cf6",
+    },
+  ];
+
+  return familyRows
+    .map((row) => ({
+      ...row,
+      score: valueByKey.get(row.key) ?? 0,
+      match: row.key === topKey ? "Primary" : "Support",
+    }))
+    .toSorted((a, b) => b.score - a.score);
 }
 
 function buildHumanRecommendationItems({
@@ -3801,6 +3971,36 @@ function humanDriverSentence(
   }
 
   return `${prefix} is ${driver.label.toLowerCase()} (${score}/100). Validate the local evidence before turning this score into an intervention package.`;
+}
+
+function findLayer(groups: MilanLayerGroup[], id: string) {
+  return groups.flatMap((group) => group.layers).find((layer) => layer.id === id) ?? null;
+}
+
+function analysisNumber(
+  properties: GeoJSON.GeoJsonProperties | null,
+  key: string,
+  fallback: number,
+) {
+  const value = properties?.[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const numericValue = Number(value);
+    if (Number.isFinite(numericValue)) return numericValue;
+  }
+
+  return fallback;
+}
+
+function analysisText(
+  properties: GeoJSON.GeoJsonProperties | null,
+  key: string,
+  fallback = "Citywide baseline",
+) {
+  const value = properties?.[key];
+  if (typeof value === "string" && value.trim()) return value;
+  if (typeof value === "number") return String(value);
+  return fallback;
 }
 
 function buildAnalysisDashboardContext({

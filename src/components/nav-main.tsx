@@ -41,7 +41,7 @@ export function NavMain({
 }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
+      <SidebarGroupLabel className="text-sm">Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => {
           const hasItems = Boolean(item.items?.length)
@@ -59,6 +59,7 @@ export function NavMain({
                     tooltip={item.title}
                     isActive={item.isActive}
                     disabled={item.disabled}
+                    className="text-[15px]"
                     onClick={() => {
                       if (item.id && !item.disabled) onSelect?.(item.id)
                     }}
@@ -78,6 +79,7 @@ export function NavMain({
                           <SidebarMenuSubButton
                             asChild
                             isActive={subItem.isActive}
+                            className="text-[15px] data-[size=md]:text-[15px]"
                           >
                             <a
                               href={subItem.url}

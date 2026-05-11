@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const sidebarSourcePath = new URL("../src/components/app-sidebar.tsx", import.meta.url);
+const navMainSourcePath = new URL("../src/components/nav-main.tsx", import.meta.url);
 const llmSettingsSourcePath = new URL("../src/lib/llm-settings.ts", import.meta.url);
 const dayLogoPath = new URL("../public/images/day_limen.svg", import.meta.url);
 const nightLogoPath = new URL("../public/images/night_limen.svg", import.meta.url);
@@ -66,4 +67,25 @@ test("sidebar settings use a left-side API provider editor with Xiaomi defaults"
   assert.match(llmSettingsSource, /https:\/\/token-plan-cn\.xiaomimimo\.com\/v1/);
   assert.match(llmSettingsSource, /model: "mimo-v2-omni"/);
   assert.match(llmSettingsSource, /temperature: 0\.1/);
+});
+
+test("remote model picker does not mix fetched models with common presets", async () => {
+  const source = await readFile(sidebarSourcePath, "utf8");
+
+  assert.match(source, /type ModelOptionsSource = "preset" \| "remote"/);
+  assert.match(source, /const \[modelOptionsSource, setModelOptionsSource\]/);
+  assert.match(source, /modelOptionsSource === "remote"/);
+  assert.match(source, /setModelOptionsSource\(data\.models\?\.length \? "remote" : "preset"\)/);
+  assert.doesNotMatch(
+    source,
+    /\[\s*llmSettings\.model,\s*\.\.\.modelOptions,\s*\.\.\.activeProviderPreset\.modelOptions,\s*\.\.\.COMMON_LLM_MODEL_OPTIONS,\s*\]/,
+  );
+});
+
+test("left navigation only increases local menu font sizing", async () => {
+  const source = await readFile(navMainSourcePath, "utf8");
+
+  assert.match(source, /<SidebarGroupLabel className="text-sm">Platform<\/SidebarGroupLabel>/);
+  assert.match(source, /className="text-\[15px\]"/);
+  assert.match(source, /<SidebarMenuSubButton[\s\S]*className="[^"]*text-\[15px\][^"]*"/);
 });

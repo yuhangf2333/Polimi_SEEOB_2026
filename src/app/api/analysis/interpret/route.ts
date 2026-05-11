@@ -1,10 +1,17 @@
 import { retrieveAnalysisKnowledge } from "@/lib/analysis-rag";
 import { retrieveCity2graphRelationships } from "@/lib/city2graph-relationships";
+import {
+  buildLlmRequestHeaders,
+  formatLlmUpstreamError,
+  formatMissingLlmRuntimeConfigError,
+  resolveLlmRuntimeConfig,
+} from "@/lib/llm-runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 type InterpretRequest = {
+  provider?: string;
   baseUrl?: string;
   apiKey?: string;
   model?: string;
@@ -61,20 +68,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const clientApiKey = payload.apiKey?.trim();
-  const useServerCredential = !clientApiKey;
-  const baseUrl = useServerCredential
-    ? process.env.LLM_BASE_URL?.trim() || payload.baseUrl?.trim()
-    : payload.baseUrl?.trim();
-  const apiKey = clientApiKey || process.env.LLM_API_KEY?.trim();
-  const model = useServerCredential
-    ? process.env.LLM_MODEL?.trim() || payload.model?.trim()
-    : payload.model?.trim();
-  const question = payload.question?.trim();
+  const runtimeConfig = resolveLlmRuntimeConfig(payload);
 
-  if (!baseUrl || !apiKey || !model || !question) {
+  if (runtimeConfig.missingFields.length > 0) {
     return Response.json(
-      { error: "Missing baseUrl, apiKey, model or question" },
+      { error: formatMissingLlmRuntimeConfigError(runtimeConfig) },
       { status: 400 },
     );
   }
@@ -89,7 +87,9 @@ export async function POST(request: Request) {
   let endpoint: URL;
 
   try {
-    const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+    const normalizedBase = runtimeConfig.baseUrl.endsWith("/")
+      ? runtimeConfig.baseUrl
+      : `${runtimeConfig.baseUrl}/`;
     endpoint = new URL("chat/completions", normalizedBase);
 
     if (!["http:", "https:"].includes(endpoint.protocol)) {
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
   try {
     const [projectKnowledge, city2graphRelationships] = await Promise.all([
       retrieveAnalysisKnowledge({
-        question,
+        question: runtimeConfig.question,
         context: payload.context,
       }),
       retrieveCity2graphRelationships({
@@ -115,12 +115,9 @@ export async function POST(request: Request) {
     const upstream = await fetch(endpoint, {
       method: "POST",
       signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: buildLlmRequestHeaders(runtimeConfig.apiKey),
       body: JSON.stringify({
-        model,
+        model: runtimeConfig.model,
         temperature,
         stream: Boolean(payload.stream),
         messages: [
@@ -132,7 +129,7 @@ export async function POST(request: Request) {
             role: "user",
             content: JSON.stringify(
               {
-                question,
+                question: runtimeConfig.question,
                 answer_mode: projectKnowledge.answerMode,
                 response_template: projectKnowledge.responseGuide,
                 dashboard_context: payload.context,
@@ -169,7 +166,11 @@ export async function POST(request: Request) {
 
       return Response.json(
         {
-          error: "LLM request failed",
+          error: formatLlmUpstreamError({
+            config: runtimeConfig,
+            detail: text,
+            status: upstream.status,
+          }),
           status: upstream.status,
           detail: text.slice(0, 800),
         },
