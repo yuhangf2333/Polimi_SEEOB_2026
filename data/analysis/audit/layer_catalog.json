@@ -1,0 +1,34 @@
+[
+  {
+    "id": "tp_ipt_hotspot_score_h3_res9",
+    "title": "Transport Poverty Hotspot Score",
+    "geometry": "H3 resolution 9 polygon",
+    "primary_field": "TPHS",
+    "class_field": "TPHS_class",
+    "file": "../geojson/tp_ipt_hotspot_score_h3_res9.geojson"
+  },
+  {
+    "id": "tp_ipt_intervention_priority_h3_res9",
+    "title": "Intervention Priority Index",
+    "geometry": "H3 resolution 9 polygon",
+    "primary_field": "IPI",
+    "class_field": "IPI_class",
+    "file": "../geojson/tp_ipt_intervention_priority_h3_res9.geojson"
+  },
+  {
+    "id": "tp_ipt_data_confidence_h3_res9",
+    "title": "Data Confidence Score",
+    "geometry": "H3 resolution 9 polygon",
+    "primary_field": "DCS",
+    "class_field": "confidence_class",
+    "file": "../geojson/tp_ipt_data_confidence_h3_res9.geojson"
+  },
+  {
+    "id": "tp_ipt_typology_h3_res9",
+    "title": "Hotspot Typology",
+    "geometry": "H3 resolution 9 polygon",
+    "primary_field": "typology",
+    "class_field": "typology",
+    "file": "../geojson/tp_ipt_typology_h3_res9.geojson"
+  }
+]

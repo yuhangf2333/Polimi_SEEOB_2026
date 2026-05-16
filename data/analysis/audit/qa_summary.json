@@ -1,0 +1,101 @@
+{
+  "grid_100m_rows": 157507,
+  "h3_rows": 15547,
+  "municipal_rows": 133,
+  "h3_assignment": {
+    "direct_polygon_matches": 157507,
+    "nearest_centroid_fallbacks": 0
+  },
+  "tphs_class_counts_h3": {
+    "Moderate hotspot": 9650,
+    "High hotspot": 3256,
+    "Watchlist": 2595,
+    "Low concern": 29,
+    "Critical hotspot": 17
+  },
+  "ipi_class_counts_h3": {
+    "Monitor": 12135,
+    "Low priority": 3330,
+    "Medium priority: investigate or validate": 82
+  },
+  "confidence_class_counts_h3": {
+    "High confidence: strong, recent and fine-resolution data": 15547
+  },
+  "typology_counts_h3": {
+    "Mixed or lower-priority pattern": 14532,
+    "Essential-Services Desert": 434,
+    "Growth-Transport Mismatch": 360,
+    "Active but Disconnected": 158,
+    "Dense Underserved Fringe": 61,
+    "Dispersed Rural Fragility": 2
+  },
+  "score_ranges_h3": {
+    "TPHS": [
+      12.346905674061135,
+      85.77821751898351
+    ],
+    "IPI": [
+      11.927584148902094,
+      58.78484728816035
+    ],
+    "DCS": [
+      80.25,
+      87.25
+    ]
+  },
+  "formula_audit": {
+    "formula_tolerance": 1e-09,
+    "passes_formula_tolerance": true,
+    "max_abs_residuals": {
+      "100m_Elderly_B1": 0.0,
+      "100m_Labour_B1": 0.0,
+      "100m_Education_B1": 0.0,
+      "100m_Citizenship_B1": 0.0,
+      "100m_SA_B1": 0.0,
+      "100m_FR_B1": 0.0,
+      "100m_LA_B1": 0.0,
+      "100m_HA_B1": 0.0,
+      "100m_HealthAccess_B1": 0.0,
+      "100m_SchoolAccess_B1": 0.0,
+      "100m_JobAccess_B1": 0.0,
+      "100m_GroceryAccess_B1": 0.0,
+      "100m_P_B1": 0.0,
+      "100m_B_B1": 0.0,
+      "100m_A_B1": 0.0,
+      "100m_L_B1": 0.0,
+      "100m_RoadDensity_B1": 0.0,
+      "100m_IntersectionDensity_B1": 0.0,
+      "100m_G_B1": 0.0,
+      "100m_U_B1": 0.0,
+      "100m_SVI_B2": 0.0,
+      "100m_PTA_B3": 0.0,
+      "100m_ESA_B4": 0.0,
+      "100m_ESD_B4": 0.0,
+      "100m_VSEG_B4": 0.0,
+      "100m_R_B5": 0.0,
+      "100m_DI_B5": 0.0,
+      "100m_SI_B5": 0.0,
+      "100m_DS_B5": 0.0,
+      "100m_GP_B5": 0.0,
+      "100m_EOTD_B5": 0.0,
+      "100m_DUS_B6": 0.0,
+      "100m_DRF_B6": 0.0,
+      "100m_GTM_B6_B8": 0.0,
+      "100m_ABD_B6": 0.0,
+      "100m_SDT_B6": 0.0,
+      "100m_TPHS_B7": 0.0,
+      "100m_interaction_multiplier_B7": 0.0,
+      "100m_IPI_B8": 0.0,
+      "100m_DCS_B9": 0.0,
+      "100m_CA_B9": 0.0,
+      "H3_R_B5": 4.440892098500626e-16,
+      "H3_VSEG_B4": 0.0,
+      "H3_TPHS_B7": 0.0,
+      "H3_interaction_multiplier_B7": 0.0,
+      "H3_IPI_B8": 0.0,
+      "H3_DCS_B9": 1.4210854715202004e-14,
+      "H3_CA_B9": 0.0
+    },
+    "population_mask_threshold": 7.149483998941849e-05
+  }
+}

@@ -1,0 +1,4 @@
+h3_res9,sap_id,dependency_weight,grid_count,service_count,route_lines,modes,operators,mean_total_access_time_min,total_freq_per_hour,stop_dependency_share,stop_rank_in_h3
+891f99564c7ffff,rail:trenord_regione_lombardia:S01492,43.696,9,6,R38;RE 13;RE 8;S5;S6;S9,rail,Trenord,25.931,153.0,0.218,1.0
+891f99564c7ffff,metro:atm:887,34.851,8,2,4,metro,ATM S.p.a. / AMAT / Comune di Milano,10.780,468.0,0.1738,2.0
+891f9824903ffff,bus:netex:CAL61281,5.18,9,1,Z556,bus,Consorzio Autoservizi Lombardi,43.6,9.0,0.3347,1.0

@@ -1,0 +1,629 @@
+{
+  "dataset": "city2graph_tp_ipt_decision_layer_20260516_normalized_dashboard",
+  "title": "city2graph TP-IPT decision analysis layer, H3 resolution 9",
+  "generated_at_utc": "2026-05-16T12:15:48.340Z",
+  "h3_resolution": 9,
+  "h3_count": 15547,
+  "hotspot_cluster_count": null,
+  "high_priority_h3_count": 2241,
+  "medium_priority_h3_count": 6238,
+  "score_means": {
+    "svi_score": 39.72,
+    "pt_deficit_score": 65.521,
+    "essential_services_deficit_score": 62.348,
+    "eo_territorial_disadvantage_score": 48.154,
+    "hotspot_score": 56.653,
+    "intervention_priority_score": 51.264,
+    "intervention_priority_formula_score": 42.882,
+    "data_confidence_score": 89.284
+  },
+  "priority_class_distribution": [
+    {
+      "priority_class": "Low Priority",
+      "h3_count": 7068,
+      "share": 0.454621,
+      "percent": 45.46
+    },
+    {
+      "priority_class": "Medium Priority",
+      "h3_count": 6238,
+      "share": 0.401235,
+      "percent": 40.12
+    },
+    {
+      "priority_class": "High Priority",
+      "h3_count": 2241,
+      "share": 0.144144,
+      "percent": 14.41
+    }
+  ],
+  "typology_distribution": [
+    {
+      "typology": "Monitor / Low Composite Need",
+      "h3_count": 5652,
+      "share": 0.363543,
+      "percent": 36.35
+    },
+    {
+      "typology": "B/C Network Mismatch",
+      "h3_count": 5398,
+      "share": 0.347205,
+      "percent": 34.72
+    },
+    {
+      "typology": "Essential Services Desert",
+      "h3_count": 1670,
+      "share": 0.107416,
+      "percent": 10.74
+    },
+    {
+      "typology": "Walking Detour Barrier",
+      "h3_count": 752,
+      "share": 0.048369,
+      "percent": 4.84
+    },
+    {
+      "typology": "Service Access Deficit",
+      "h3_count": 532,
+      "share": 0.034219,
+      "percent": 3.42
+    },
+    {
+      "typology": "Growth-Transport Mismatch",
+      "h3_count": 450,
+      "share": 0.028944,
+      "percent": 2.89
+    },
+    {
+      "typology": "Public Transport Deficit",
+      "h3_count": 388,
+      "share": 0.024957,
+      "percent": 2.5
+    },
+    {
+      "typology": "Dispersed Rural Fragility",
+      "h3_count": 268,
+      "share": 0.017238,
+      "percent": 1.72
+    },
+    {
+      "typology": "Dense Underserved Fringe",
+      "h3_count": 235,
+      "share": 0.015115,
+      "percent": 1.51
+    },
+    {
+      "typology": "Active but Disconnected Area",
+      "h3_count": 202,
+      "share": 0.012993,
+      "percent": 1.3
+    }
+  ],
+  "top_10_h3": [
+    {
+      "h3_id": "891f991ad6bffff",
+      "municipality": "Masate",
+      "municipality_name": "Masate",
+      "scores": {
+        "intervention_priority_score": 100,
+        "intervention_priority_formula_score": 79,
+        "hotspot_score": 84.9,
+        "data_confidence_score": 87.80534394962594
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Essential Services Desert",
+        "typology": "Essential Services Desert",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 53.6,
+        "public_transport_deficit": 100,
+        "essential_services_deficit": 90.9,
+        "eo_territorial_disadvantage": 70.3,
+        "city2graph_network_penalty": 77.1,
+        "growth_mismatch": 1
+      },
+      "dominant_drivers": "Transport Access; Essential Services; City2Graph network penalty",
+      "typology": "Essential Services Desert",
+      "typology_reason": "High Priority H3 cell in Masate: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools; Prioritize pedestrian permeability: crossings, missing links, station approaches, and barrier removal",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Masate: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "hotspot_score": 84.9,
+      "intervention_priority_score": 100,
+      "intervention_priority_formula_score": 79,
+      "data_confidence_score": 87.80534394962594,
+      "hotspot_class": "Essential Services Desert",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f99784c7ffff",
+      "municipality": "San Colombano al Lambro",
+      "municipality_name": "San Colombano al Lambro",
+      "scores": {
+        "intervention_priority_score": 96.35721944572151,
+        "intervention_priority_formula_score": 76.3,
+        "hotspot_score": 91.8,
+        "data_confidence_score": 85.83393398971556
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Essential Services Desert",
+        "typology": "Essential Services Desert",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 62.4,
+        "public_transport_deficit": 99.6,
+        "essential_services_deficit": 98.7,
+        "eo_territorial_disadvantage": 70.4,
+        "city2graph_network_penalty": 67.4,
+        "growth_mismatch": 0.8622429854533012
+      },
+      "dominant_drivers": "Transport Access; Essential Services; Spatial Equity",
+      "typology": "Essential Services Desert",
+      "typology_reason": "High Priority H3 cell in San Colombano al Lambro: Essential Services Desert; top drivers are Transport Access; Essential Services; Spatial Equity.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in San Colombano al Lambro: Essential Services Desert; top drivers are Transport Access; Essential Services; Spatial Equity.",
+      "hotspot_score": 91.8,
+      "intervention_priority_score": 96.35721944572151,
+      "intervention_priority_formula_score": 76.3,
+      "data_confidence_score": 85.83393398971556,
+      "hotspot_class": "Essential Services Desert",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f991ad07ffff",
+      "municipality": "Basiano",
+      "municipality_name": "Basiano",
+      "scores": {
+        "intervention_priority_score": 95.00782003149399,
+        "intervention_priority_formula_score": 75.3,
+        "hotspot_score": 99.9,
+        "data_confidence_score": 91.5783950194557
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Essential Services Desert",
+        "typology": "Essential Services Desert",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 88.5,
+        "public_transport_deficit": 83.5,
+        "essential_services_deficit": 90.9,
+        "eo_territorial_disadvantage": 69.5,
+        "city2graph_network_penalty": 60.5,
+        "growth_mismatch": 1
+      },
+      "dominant_drivers": "Essential Services; Socioeconomic Need; Transport Access",
+      "typology": "Essential Services Desert",
+      "typology_reason": "High Priority H3 cell in Basiano: Essential Services Desert; top drivers are Essential Services; Socioeconomic Need; Transport Access.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Basiano: Essential Services Desert; top drivers are Essential Services; Socioeconomic Need; Transport Access.",
+      "hotspot_score": 99.9,
+      "intervention_priority_score": 95.00782003149399,
+      "intervention_priority_formula_score": 75.3,
+      "data_confidence_score": 91.5783950194557,
+      "hotspot_class": "Essential Services Desert",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f9951c3bffff",
+      "municipality": "Vernate",
+      "municipality_name": "Vernate",
+      "scores": {
+        "intervention_priority_score": 93.52348067584374,
+        "intervention_priority_formula_score": 74.2,
+        "hotspot_score": 78.6,
+        "data_confidence_score": 82.30631771816041
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Growth-Transport Mismatch",
+        "typology": "Growth-Transport Mismatch",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 46.6,
+        "public_transport_deficit": 95.4,
+        "essential_services_deficit": 96.4,
+        "eo_territorial_disadvantage": 53,
+        "city2graph_network_penalty": 70,
+        "growth_mismatch": 0.9729173747172183
+      },
+      "dominant_drivers": "Essential Services; Transport Access; City2Graph network penalty",
+      "typology": "Growth-Transport Mismatch",
+      "typology_reason": "High Priority H3 cell in Vernate: Growth-Transport Mismatch; top drivers are Essential Services; Transport Access; City2Graph network penalty.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools; Tie new growth areas to feeder transit before additional expansion is approved",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Vernate: Growth-Transport Mismatch; top drivers are Essential Services; Transport Access; City2Graph network penalty.",
+      "hotspot_score": 78.6,
+      "intervention_priority_score": 93.52348067584374,
+      "intervention_priority_formula_score": 74.2,
+      "data_confidence_score": 82.30631771816041,
+      "hotspot_class": "Growth-Transport Mismatch",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f9956b67ffff",
+      "municipality": "Tribiano",
+      "municipality_name": "Tribiano",
+      "scores": {
+        "intervention_priority_score": 93.25360079299824,
+        "intervention_priority_formula_score": 74,
+        "hotspot_score": 89.6,
+        "data_confidence_score": 86.3091308871488
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Essential Services Desert",
+        "typology": "Essential Services Desert",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 63.9,
+        "public_transport_deficit": 100,
+        "essential_services_deficit": 87.1,
+        "eo_territorial_disadvantage": 63.7,
+        "city2graph_network_penalty": 69.5,
+        "growth_mismatch": 0.7227309766605607
+      },
+      "dominant_drivers": "Transport Access; Essential Services; City2Graph network penalty",
+      "typology": "Essential Services Desert",
+      "typology_reason": "High Priority H3 cell in Tribiano: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Tribiano: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "hotspot_score": 89.6,
+      "intervention_priority_score": 93.25360079299824,
+      "intervention_priority_formula_score": 74,
+      "data_confidence_score": 86.3091308871488,
+      "hotspot_class": "Essential Services Desert",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f9956aafffff",
+      "municipality": "Mediglia",
+      "municipality_name": "Mediglia",
+      "scores": {
+        "intervention_priority_score": 93.25360079299824,
+        "intervention_priority_formula_score": 74,
+        "hotspot_score": 95,
+        "data_confidence_score": 90.3025257211439
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Essential Services Desert",
+        "typology": "Essential Services Desert",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 69.8,
+        "public_transport_deficit": 100,
+        "essential_services_deficit": 98.4,
+        "eo_territorial_disadvantage": 56.9,
+        "city2graph_network_penalty": 73.3,
+        "growth_mismatch": 0.47326704603744757
+      },
+      "dominant_drivers": "Transport Access; Essential Services; City2Graph network penalty",
+      "typology": "Essential Services Desert",
+      "typology_reason": "High Priority H3 cell in Mediglia: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools; Prioritize pedestrian permeability: crossings, missing links, station approaches, and barrier removal",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Mediglia: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "hotspot_score": 95,
+      "intervention_priority_score": 93.25360079299824,
+      "intervention_priority_formula_score": 74,
+      "data_confidence_score": 90.3025257211439,
+      "hotspot_class": "Essential Services Desert",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f9836cc7ffff",
+      "municipality": "Robecchetto con Induno",
+      "municipality_name": "Robecchetto con Induno",
+      "scores": {
+        "intervention_priority_score": 93.1186608515755,
+        "intervention_priority_formula_score": 73.9,
+        "hotspot_score": 89.8,
+        "data_confidence_score": 82.9796564477597
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Essential Services Desert",
+        "typology": "Essential Services Desert",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 69.1,
+        "public_transport_deficit": 99.9,
+        "essential_services_deficit": 78.2,
+        "eo_territorial_disadvantage": 55.6,
+        "city2graph_network_penalty": 69.8,
+        "growth_mismatch": 0.48163100724210095
+      },
+      "dominant_drivers": "Transport Access; Essential Services; City2Graph network penalty",
+      "typology": "Essential Services Desert",
+      "typology_reason": "High Priority H3 cell in Robecchetto con Induno: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "transit_dependency": {
+        "diagnosis": "Bus-only low redundancy",
+        "redundancy_score": 44.44444444444444,
+        "primary_route_line": "Z636",
+        "primary_route_mode": "bus",
+        "primary_stop_id": "bus:movibus_agenzia_tpl_area_milano:24364",
+        "recommended_gtfs_action": "Strengthen bus corridor reliability and connect it to rail, metro, or tram interchange."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Robecchetto con Induno: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "hotspot_score": 89.8,
+      "intervention_priority_score": 93.1186608515755,
+      "intervention_priority_formula_score": 73.9,
+      "data_confidence_score": 82.9796564477597,
+      "hotspot_class": "Essential Services Desert",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f990a0d7ffff",
+      "municipality": "Truccazzano",
+      "municipality_name": "Truccazzano",
+      "scores": {
+        "intervention_priority_score": 92.44396114446174,
+        "intervention_priority_formula_score": 73.4,
+        "hotspot_score": 85.6,
+        "data_confidence_score": 81.97220878965994
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Essential Services Desert",
+        "typology": "Essential Services Desert",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 57,
+        "public_transport_deficit": 100,
+        "essential_services_deficit": 94.2,
+        "eo_territorial_disadvantage": 52.3,
+        "city2graph_network_penalty": 67,
+        "growth_mismatch": 0.3548115560555118
+      },
+      "dominant_drivers": "Transport Access; Essential Services; City2Graph network penalty",
+      "typology": "Essential Services Desert",
+      "typology_reason": "High Priority H3 cell in Truccazzano: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Truccazzano: Essential Services Desert; top drivers are Transport Access; Essential Services; City2Graph network penalty.",
+      "hotspot_score": 85.6,
+      "intervention_priority_score": 92.44396114446174,
+      "intervention_priority_formula_score": 73.4,
+      "data_confidence_score": 81.97220878965994,
+      "hotspot_class": "Essential Services Desert",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f99c9cd7ffff",
+      "municipality": "Corbetta",
+      "municipality_name": "Corbetta",
+      "scores": {
+        "intervention_priority_score": 92.03914132019348,
+        "intervention_priority_formula_score": 73.1,
+        "hotspot_score": 77.6,
+        "data_confidence_score": 81.40890085533724
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Growth-Transport Mismatch",
+        "typology": "Growth-Transport Mismatch",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 48.5,
+        "public_transport_deficit": 85.9,
+        "essential_services_deficit": 95.5,
+        "eo_territorial_disadvantage": 64.6,
+        "city2graph_network_penalty": 60.3,
+        "growth_mismatch": 0.9736309943139988
+      },
+      "dominant_drivers": "Essential Services; Transport Access; Spatial Equity",
+      "typology": "Growth-Transport Mismatch",
+      "typology_reason": "High Priority H3 cell in Corbetta: Growth-Transport Mismatch; top drivers are Essential Services; Transport Access; Spatial Equity.",
+      "transit_dependency": {
+        "diagnosis": "No useful PT supply",
+        "redundancy_score": 100,
+        "primary_route_line": null,
+        "primary_route_mode": null,
+        "primary_stop_id": null,
+        "recommended_gtfs_action": "Add feeder service or new stop coverage before scoring this cell as transit-served."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools; Tie new growth areas to feeder transit before additional expansion is approved",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Corbetta: Growth-Transport Mismatch; top drivers are Essential Services; Transport Access; Spatial Equity.",
+      "hotspot_score": 77.6,
+      "intervention_priority_score": 92.03914132019348,
+      "intervention_priority_formula_score": 73.1,
+      "data_confidence_score": 81.40890085533724,
+      "hotspot_class": "Growth-Transport Mismatch",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    },
+    {
+      "h3_id": "891f9951c33ffff",
+      "municipality": "Vernate",
+      "municipality_name": "Vernate",
+      "scores": {
+        "intervention_priority_score": 91.90420137877074,
+        "intervention_priority_formula_score": 73,
+        "hotspot_score": 77.9,
+        "data_confidence_score": 81.78932638466306
+      },
+      "classes": {
+        "priority_class": "High Priority",
+        "hotspot_class": "Growth-Transport Mismatch",
+        "typology": "Growth-Transport Mismatch",
+        "confidence_class": "High confidence"
+      },
+      "score_breakdown": {
+        "social_vulnerability": 47,
+        "public_transport_deficit": 93.3,
+        "essential_services_deficit": 96.4,
+        "eo_territorial_disadvantage": 51,
+        "city2graph_network_penalty": 71.3,
+        "growth_mismatch": 0.8222432003653627
+      },
+      "dominant_drivers": "Essential Services; Transport Access; City2Graph network penalty",
+      "typology": "Growth-Transport Mismatch",
+      "typology_reason": "High Priority H3 cell in Vernate: Growth-Transport Mismatch; top drivers are Essential Services; Transport Access; City2Graph network penalty.",
+      "transit_dependency": {
+        "diagnosis": "Single low-frequency route dependency",
+        "redundancy_score": 0,
+        "primary_route_line": "z509",
+        "primary_route_mode": "bus",
+        "primary_stop_id": "bus:star_mobility_agenzia_tpl_area_milano:veMTEROSSO",
+        "recommended_gtfs_action": "Increase frequency on the primary route and add a backup route or transfer option."
+      },
+      "suggested_intervention_family": "Improve bus frequency and evening/weekend coverage near weak PTAL cells; Add mobile or satellite essential-service access points for healthcare, food, or schools; Prioritize pedestrian permeability: crossings, missing links, station approaches, and barrier removal; Tie new growth areas to feeder transit before additional expansion is approved",
+      "local_validation_needs": "Validate GTFS/NeTEx service availability, walking-network detours, and local service capacity before implementation.",
+      "possible_kpis": "PT frequency uplift; reachable essential services; walking detour reduction; route redundancy; vulnerable residents reached.",
+      "caveats": [
+        "Priority score is shown as full-map normalized intervention_priority_score for dashboard display.",
+        "intervention_priority_formula_score preserves the raw formula score before normalization.",
+        "city2graph evidence supports interpretation and validation; it does not replace the formula score."
+      ],
+      "report_ready_paragraph": "High Priority H3 cell in Vernate: Growth-Transport Mismatch; top drivers are Essential Services; Transport Access; City2Graph network penalty.",
+      "hotspot_score": 77.9,
+      "intervention_priority_score": 91.90420137877074,
+      "intervention_priority_formula_score": 73,
+      "data_confidence_score": 81.78932638466306,
+      "hotspot_class": "Growth-Transport Mismatch",
+      "priority_class": "High Priority",
+      "confidence_class": "High confidence"
+    }
+  ],
+  "caveats": [
+    "intervention_priority_formula_score is the raw formula score from tp_ipt_h3_res9_scores.csv.",
+    "intervention_priority_score is full-map min-max normalized from intervention_priority_formula_score.",
+    "Dashboard, report and Ask AI use the normalized score for display while preserving the raw formula score in context."
+  ]
+}
