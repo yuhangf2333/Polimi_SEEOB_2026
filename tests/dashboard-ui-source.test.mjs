@@ -25,6 +25,11 @@ test("analysis chat groups recommended questions by category with AI prompt temp
   assert.match(source, /prompt:\s*"What makes this area high priority\?/);
   assert.match(source, /label: "Which stops and routes matter\?"/);
   assert.match(source, /prompt:\s*"Which stops and routes matter here\?/);
+  assert.match(source, /id: "data"/);
+  assert.match(source, /label: "Data"/);
+  assert.match(source, /label: "How are the scores calculated\?"/);
+  assert.match(source, /prompt:\s*"Show how the main scores are calculated\./);
+  assert.match(source, /grid-cols-5/);
   assert.match(source, /const \[activePresetCategoryId, setActivePresetCategoryId\]/);
   assert.match(source, /activePresetCategory\.questions\.map/);
   assert.match(source, /choosePreset\(preset\)/);
@@ -94,6 +99,16 @@ test("analysis markdown tables render in a bounded chat-width table viewport", a
   assert.doesNotMatch(source, /<table className=/);
 });
 
+test("analysis chat renders formula math blocks and inline math", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /block\.type === "math"/);
+  assert.match(source, /data-analysis-math-block/);
+  assert.match(source, /data-analysis-inline-math/);
+  assert.match(source, /\\\$\[\^\$\\n\]\+\\\$/);
+  assert.match(source, /Use markdown math for formulas/);
+});
+
 test("analysis tables expose an expand dialog with the full table", async () => {
   const source = await loadDashboardSource();
 
@@ -131,6 +146,14 @@ test("analysis chat keeps markdown lists as simple readable lists", async () => 
   assert.doesNotMatch(source, /function AnalysisStepList/);
   assert.doesNotMatch(source, /data-analysis-card-list/);
   assert.doesNotMatch(source, /data-analysis-step-list/);
+});
+
+test("analysis chat commits final streamed decoder tail", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /answer \+= decoder\.decode\(\);/);
+  assert.match(source, /const finalAnswer = answer;/);
+  assert.match(source, /content: finalAnswer/);
 });
 
 test("dashboard score bars keep the row list and open formula details in a dialog", async () => {

@@ -23,6 +23,7 @@ type InterpretRequest = {
 
 type ChatCompletionResponse = {
   choices?: Array<{
+    finish_reason?: string | null;
     message?: {
       content?: string;
     };
@@ -32,11 +33,15 @@ type ChatCompletionResponse = {
 
 type ChatCompletionChunk = {
   choices?: Array<{
+    finish_reason?: string | null;
     delta?: {
       content?: string;
     };
   }>;
 };
+
+const LLM_REQUEST_TIMEOUT_MS = 75_000;
+const DEFAULT_LLM_MAX_TOKENS = 1800;
 
 const SYSTEM_PROMPT = [
   "You are an evidence-grounded spatial planning assistant for the Milan TP-IPT platform.",
@@ -55,6 +60,8 @@ const SYSTEM_PROMPT = [
   "Keep answers compact, but include enough reasoning to be useful.",
   "When comparing scores, evidence, caveats, interventions, or validation tasks, prefer a markdown table.",
   "Do not wrap markdown tables in code fences.",
+  "For formulas, use markdown math delimiters such as $PTD = 1 - PTA$ or $$EOTD = M(0.45 SI + 0.25 DS + 0.20 GP + 0.10 DI)$$.",
+  "Complete the answer within the response. If evidence is missing, say what is missing instead of stopping mid-answer.",
   "When the user asks what to do next, include a concrete intervention recommendation and one validation step.",
   "Always include data confidence or caveats when they affect interpretation.",
 ].join(" ");
@@ -100,7 +107,11 @@ export async function POST(request: Request) {
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 45_000);
+  const timeout = setTimeout(() => controller.abort(), LLM_REQUEST_TIMEOUT_MS);
+  const envMaxTokens = Number(process.env.LLM_MAX_TOKENS);
+  const maxTokens = Number.isFinite(envMaxTokens) && envMaxTokens > 0
+    ? Math.floor(envMaxTokens)
+    : DEFAULT_LLM_MAX_TOKENS;
 
   try {
     const [projectKnowledge, city2graphRelationships] = await Promise.all([
@@ -119,6 +130,7 @@ export async function POST(request: Request) {
       body: JSON.stringify({
         model: runtimeConfig.model,
         temperature,
+        max_tokens: maxTokens,
         stream: Boolean(payload.stream),
         messages: [
           {
@@ -190,7 +202,11 @@ export async function POST(request: Request) {
 
       if (!contentType.includes("text/event-stream")) {
         const data = (await upstream.json()) as ChatCompletionResponse;
-        const answer = data.choices?.[0]?.message?.content?.trim();
+        const choice = data.choices?.[0];
+        const answer = withTruncationNotice(
+          choice?.message?.content?.trim(),
+          choice?.finish_reason,
+        );
 
         if (!answer) {
           return Response.json(
@@ -216,7 +232,11 @@ export async function POST(request: Request) {
     }
 
     const data = (await upstream.json()) as ChatCompletionResponse;
-    const answer = data.choices?.[0]?.message?.content?.trim();
+    const choice = data.choices?.[0];
+    const answer = withTruncationNotice(
+      choice?.message?.content?.trim(),
+      choice?.finish_reason,
+    );
 
     if (!answer) {
       return Response.json(
@@ -278,8 +298,12 @@ function streamOpenAiText(body: ReadableStream<Uint8Array>) {
 
           try {
             const parsed = JSON.parse(data) as ChatCompletionChunk;
-            const content = parsed.choices?.[0]?.delta?.content;
+            const choice = parsed.choices?.[0];
+            const content = choice?.delta?.content;
             if (content) controller.enqueue(encoder.encode(content));
+            if (choice?.finish_reason === "length") {
+              controller.enqueue(encoder.encode(truncationNotice()));
+            }
           } catch {
             // Ignore non-JSON keep-alive chunks from OpenAI-compatible providers.
           }
@@ -297,12 +321,28 @@ function streamOpenAiText(body: ReadableStream<Uint8Array>) {
 
         try {
           const parsed = JSON.parse(data) as ChatCompletionChunk;
-          const content = parsed.choices?.[0]?.delta?.content;
+          const choice = parsed.choices?.[0];
+          const content = choice?.delta?.content;
           if (content) controller.enqueue(encoder.encode(content));
+          if (choice?.finish_reason === "length") {
+            controller.enqueue(encoder.encode(truncationNotice()));
+          }
         } catch {
           // Ignore malformed trailing chunks.
         }
       },
     }),
   );
+}
+
+function withTruncationNotice(
+  answer: string | undefined,
+  finishReason: string | null | undefined,
+) {
+  if (!answer) return "";
+  return finishReason === "length" ? `${answer}${truncationNotice()}` : answer;
+}
+
+function truncationNotice() {
+  return "\n\nNote: the model stopped because it reached its token limit; ask a narrower follow-up if more detail is needed.";
 }

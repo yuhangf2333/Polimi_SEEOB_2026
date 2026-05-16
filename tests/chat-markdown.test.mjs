@@ -58,3 +58,22 @@ test("parseChatMarkdown keeps numbered lists distinct from unordered lists", asy
   assert.equal(blocks[1].type, "list");
   assert.equal(blocks[1].ordered, false);
 });
+
+test("parseChatMarkdown preserves display math blocks for formula answers", async () => {
+  const { parseChatMarkdown } = await loadChatMarkdown();
+
+  const blocks = parseChatMarkdown(`
+Formula:
+
+$$
+PTD_{display} = 100(1 - PTA)
+$$
+
+Use this for the dashboard score.
+`);
+
+  assert.equal(blocks[0].type, "paragraph");
+  assert.equal(blocks[1].type, "math");
+  assert.equal(blocks[1].text, "PTD_{display} = 100(1 - PTA)");
+  assert.equal(blocks[2].type, "paragraph");
+});

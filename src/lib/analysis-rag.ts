@@ -74,6 +74,32 @@ const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
       "The strict recalculated project methodology uses 100 m grids for computation, H3 resolution 9 for WebGIS visualization, and municipality as a dominant attribute. Core formulas include SVI = 0.20*Elderly + 0.20*Labour + 0.15*Education + 0.15*Citizenship + 0.20*Income + 0.10*LowCarAccess, PTD = 1 - PTA, ESD = 1 - ESA, EOTD = M * (0.45*SI + 0.25*DS + 0.20*GP + 0.10*DI), TPHS = min(100, 100*(0.40*SVI + 0.30*PTD + 0.20*ESD + 0.10*EOTD)*(1 + 0.20*min(SVI, PTD, ESD))), intervention_priority_formula_score (IPI raw formula score) = 100*(0.45*TPHS_norm + 0.20*VPE + 0.15*ESC + 0.10*FEAS + 0.10*GM)*CA, intervention_priority_score = full-map min-max normalize(intervention_priority_formula_score), DCS = 100*(0.35*source_completeness + 0.20*spatial_resolution + 0.20*temporal_freshness + 0.25*data_directness), and CA = 0.85 + 0.15*DCS/100.",
   },
   {
+    id: "data-formula-cookbook",
+    title: "Data and formula cookbook",
+    source: "data/analysis/audit/formula_audit_summary.json",
+    modes: ["methodology", "data_confidence", "overview"],
+    keywords: [
+      "data",
+      "formula",
+      "formulas",
+      "calculate",
+      "calculation",
+      "score formula",
+      "components",
+      "variables",
+      "render",
+      "math",
+      "latex",
+    ],
+    questions: [
+      "How are the data layers calculated?",
+      "Show the formulas for every score.",
+      "Which data variables feed each formula?",
+    ],
+    content:
+      "Use markdown math delimiters for formulas so the WebGIS answer renderer can display them. Formula reference: $$SVI = 0.20 Elderly + 0.20 Labour + 0.15 Education + 0.15 Citizenship + 0.20 Income + 0.10 LowCarAccess$$. $$PTD = 1 - PTA$$ and the dashboard displays it on a 0-100 scale as $$PTD_{display} = 100(1 - PTA)$$. $$ESD = 1 - ESA$$ where ESA combines HealthAccess, SchoolAccess, JobAccess, and GroceryAccess. $$EOTD = M(0.45 SI + 0.25 DS + 0.20 GP + 0.10 DI)$$. $$TPHS = min(100, 100(0.40 SVI + 0.30 PTD + 0.20 ESD + 0.10 EOTD)(1 + 0.20 min(SVI, PTD, ESD)))$$. $$intervention_priority_formula_score = 100(0.45 TPHS_norm + 0.20 VPE + 0.15 ESC + 0.10 FEAS + 0.10 GM)CA$$. $$intervention_priority_score = minmax(intervention_priority_formula_score)$$ across all visible H3 cells. $$DCS = 100(0.35 source_completeness + 0.20 spatial_resolution + 0.20 temporal_freshness + 0.25 data_directness)$$ and $$CA = 0.85 + 0.15 DCS/100$$. When explaining formulas, say which variables are direct measurements and which are proxies.",
+  },
+  {
     id: "citywide-analysis-summary",
     title: "Citywide TP-IPT summary",
     source: "data/analysis/summary.json",
@@ -433,6 +459,7 @@ const RESPONSE_GUIDES: Record<AnalysisResponseMode, AnalysisResponseGuide> = {
     tablePreference: "Use a table only when comparing multiple metrics.",
     styleRules: [
       "Keep formulas readable.",
+      "Use markdown math delimiters for formulas, for example $PTD = 1 - PTA$ or $$EOTD = M(0.45 SI + 0.25 DS + 0.20 GP + 0.10 DI)$$.",
       "Separate methodology from policy interpretation.",
     ],
   },
@@ -569,7 +596,7 @@ function detectResponseMode(
 function detectAnswerMode(question: string): AnalysisAnswerMode {
   const normalized = question.toLowerCase();
 
-  if (/\b(formula|method|methodology|calculate|calculated|definition|what is|how is .+ score)\b/.test(normalized)) {
+  if (/\b(formulas?|method|methodology|calculate|calculated|definition|what is|how is .+ score)\b/.test(normalized)) {
     return "methodology";
   }
 

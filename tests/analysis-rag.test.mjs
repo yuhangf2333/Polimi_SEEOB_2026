@@ -47,8 +47,23 @@ test("retrieveAnalysisKnowledge uses strict recalculated TP-IPT formulas", async
   assert.match(result.contextText, /1 \+ 0\.20\*min\(SVI, PTD, ESD\)/);
   assert.match(result.contextText, /intervention_priority_formula_score \(IPI raw formula score\) = 100\*\(0\.45\*TPHS_norm \+ 0\.20\*VPE \+ 0\.15\*ESC \+ 0\.10\*FEAS \+ 0\.10\*GM\)\*CA/);
   assert.match(result.contextText, /intervention_priority_score = full-map min-max normalize\(intervention_priority_formula_score\)/);
+  assert.match(result.contextText, /\$\$PTD_\{display\} = 100\(1 - PTA\)\$\$/);
+  assert.ok(result.responseGuide.styleRules.some((rule) => /markdown math delimiters/i.test(rule)));
   assert.doesNotMatch(result.contextText, /0\.60\*TPHS_norm/);
   assert.doesNotMatch(result.contextText, /1 \+ 0\.15\*min\(SVI, PTD, ESD\)/);
+});
+
+test("retrieveAnalysisKnowledge prioritizes the data formula cookbook for data questions", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question: "How are the data layers calculated and how should formulas render?",
+  });
+
+  assert.equal(result.answerMode, "methodology");
+  assert.equal(result.entries[0].id, "data-formula-cookbook");
+  assert.match(result.contextText, /\$\$SVI = 0\.20 Elderly/);
+  assert.match(result.contextText, /which variables are direct measurements and which are proxies/);
 });
 
 test("retrieveAnalysisKnowledge routes PTAL caveat questions to project evidence", async () => {

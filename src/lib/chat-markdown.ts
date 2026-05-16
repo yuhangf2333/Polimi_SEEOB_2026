@@ -3,6 +3,7 @@ export type ChatMarkdownAlignment = "left" | "center" | "right";
 export type ChatMarkdownBlock =
   | { type: "paragraph"; text: string; emphasis?: boolean }
   | { type: "list"; items: string[]; ordered: boolean }
+  | { type: "math"; text: string }
   | {
       type: "table";
       headers: string[];
@@ -52,6 +53,29 @@ export function parseChatMarkdown(content: string): ChatMarkdownBlock[] {
     if (!line) {
       flushParagraph();
       flushList();
+      continue;
+    }
+
+    const mathBlock = parseMathBlockStart(line);
+    if (mathBlock) {
+      flushParagraph();
+      flushList();
+
+      const parts = [mathBlock.text];
+      while (!mathBlock.closed && index + 1 < lines.length) {
+        index += 1;
+        const nextMathLine = lines[index].trim();
+        const closeIndex = nextMathLine.indexOf(mathBlock.close);
+        if (closeIndex >= 0) {
+          parts.push(nextMathLine.slice(0, closeIndex).trim());
+          mathBlock.closed = true;
+          break;
+        }
+        parts.push(nextMathLine);
+      }
+
+      const text = parts.join("\n").trim();
+      if (text) blocks.push({ type: "math", text });
       continue;
     }
 
@@ -139,4 +163,34 @@ function normalizeTableAlignments(
 
 function normalizeTableRow(cells: string[], columnCount: number) {
   return Array.from({ length: columnCount }, (_, index) => cells[index] ?? "");
+}
+
+function parseMathBlockStart(line: string) {
+  if (line.startsWith("$$")) {
+    return parseDelimitedMathStart(line.slice(2), "$$");
+  }
+
+  if (line.startsWith("\\[")) {
+    return parseDelimitedMathStart(line.slice(2), "\\]");
+  }
+
+  return null;
+}
+
+function parseDelimitedMathStart(rest: string, close: "$$" | "\\]") {
+  const closeIndex = rest.indexOf(close);
+
+  if (closeIndex >= 0) {
+    return {
+      close,
+      closed: true,
+      text: rest.slice(0, closeIndex).trim(),
+    };
+  }
+
+  return {
+    close,
+    closed: false,
+    text: rest.trim(),
+  };
 }

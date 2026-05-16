@@ -1020,6 +1020,32 @@ const ANALYSIS_PRESET_CATEGORIES = [
       },
     ],
   },
+  {
+    id: "data",
+    label: "Data",
+    questions: [
+      {
+        label: "How are the scores calculated?",
+        prompt:
+          "Show how the main scores are calculated. Use markdown math for formulas and explain SVI, PTD, ESD, EOTD, TPHS, intervention_priority_formula_score, intervention_priority_score, and DCS.",
+      },
+      {
+        label: "Explain the priority formula.",
+        prompt:
+          "Explain the intervention priority formula step by step. Show the raw formula score and the full-map normalized intervention_priority_score using markdown math.",
+      },
+      {
+        label: "What data feeds each score?",
+        prompt:
+          "Which datasets feed each score? Compare vulnerability, public transport, essential services, earth observation, hotspot, priority, and confidence evidence in a compact table.",
+      },
+      {
+        label: "Which data caveats affect formulas?",
+        prompt:
+          "Which caveats affect the score formulas? Explain proxy variables, GTFS/NeTEx limits, service POI limits, EO limits, and what should be validated before using the scores.",
+      },
+    ],
+  },
 ] satisfies AnalysisPresetCategory[];
 
 function publicTransportContinuousLegend(layer: PublicMilanLayer) {
@@ -4861,6 +4887,19 @@ function AnalysisChatBox({
 
         answer += decoder.decode();
         if (!answer.trim()) throw new Error("AI explanation failed");
+        const finalAnswer = answer;
+        setMessages((current) => {
+          const next = [...current];
+          if (next[next.length - 1]?.role === "assistant") {
+            next[next.length - 1] = {
+              role: "assistant",
+              content: finalAnswer,
+            };
+          } else {
+            next.push({ role: "assistant", content: finalAnswer });
+          }
+          return next;
+        });
         setState({ status: "success", answer, error: null });
       } catch (error) {
         const message =
@@ -4946,7 +4985,7 @@ function AnalysisChatBox({
         </Button>
         {showPresets ? (
           <div className="grid gap-2 border-t p-2">
-            <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted/60 p-1">
+            <div className="grid grid-cols-5 gap-1 rounded-xl bg-muted/60 p-1">
               {ANALYSIS_PRESET_CATEGORIES.map((category) => (
                 <Button
                   key={category.id}
@@ -5064,6 +5103,21 @@ function ChatMessageContent({
   return (
     <div className="flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden">
       {blocks.map((block, index) => {
+        if (block.type === "math") {
+          return (
+            <div
+              key={index}
+              data-analysis-math-block
+              className={cn(
+                "max-w-full overflow-x-auto rounded-xl bg-muted/60 px-3 py-2 font-mono text-[12px] leading-6 whitespace-pre text-foreground",
+                muted && "bg-primary-foreground/10 text-primary-foreground",
+              )}
+            >
+              {block.text}
+            </div>
+          );
+        }
+
         if (block.type === "list") {
           if (block.ordered) {
             return (
@@ -5378,7 +5432,9 @@ function renderParagraphMarkdown(text: string, muted = false) {
 }
 
 function renderInlineMarkdown(text: string, muted = false) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  const parts = text
+    .split(/(\*\*[^*]+\*\*|\$[^$\n]+\$|\\\([^\n]+?\\\))/g)
+    .filter(Boolean);
 
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
@@ -5392,6 +5448,28 @@ function renderInlineMarkdown(text: string, muted = false) {
         >
           {part.slice(2, -2)}
         </strong>
+      );
+    }
+
+    if (
+      (part.startsWith("$") && part.endsWith("$")) ||
+      (part.startsWith("\\(") && part.endsWith("\\)"))
+    ) {
+      const textContent = part.startsWith("$")
+        ? part.slice(1, -1)
+        : part.slice(2, -2);
+
+      return (
+        <code
+          key={index}
+          data-analysis-inline-math
+          className={cn(
+            "rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground",
+            muted && "bg-primary-foreground/15 text-primary-foreground",
+          )}
+        >
+          {textContent}
+        </code>
       );
     }
 
