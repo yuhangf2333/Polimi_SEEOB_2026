@@ -596,6 +596,21 @@ const PUBLIC_TRANSPORT_CATEGORY_LEGENDS: Record<
       { value: "6b", label: "6b", color: "#a9505c" },
     ],
   },
+  "ptal-ptal-100m-gtfs-netex": {
+    label: "Public Transport Accessibility Level (PTAL, 100m GTFS/NeTEx)",
+    property: "ptal",
+    classes: [
+      { value: "0", label: "0", color: "#f1f5f9" },
+      { value: "1a", label: "1a", color: "#71879d" },
+      { value: "1b", label: "1b", color: "#55a5c0" },
+      { value: "2", label: "2", color: "#39a9be" },
+      { value: "3", label: "3", color: "#a6d96a" },
+      { value: "4", label: "4", color: "#f2e42d" },
+      { value: "5", label: "5", color: "#edb06b" },
+      { value: "6a", label: "6a", color: "#dc5f6b" },
+      { value: "6b", label: "6b", color: "#a9505c" },
+    ],
+  },
   "ptal-ptol-component": {
     label: "Public Transport Opportunity Level (PTOL)",
     property: "PTOL_component",
@@ -615,6 +630,17 @@ const PUBLIC_TRANSPORT_CATEGORY_LEGENDS: Record<
       { value: "1", label: "1", color: "#8fc5e2", max: 1 },
       { value: "2", label: "2", color: "#3f98cf", max: 2 },
       { value: "3", label: "3", color: "#0f6faa", max: 3 },
+      { value: "4", label: "4", color: "#123f7d" },
+    ],
+  },
+  "ptal-ptol-100m-gtfs-netex": {
+    label: "Public Transport Opportunity Level (PTOL, 100m GTFS/NeTEx)",
+    property: "ptol",
+    classes: [
+      { value: "0", label: "0", color: "#e6eef5" },
+      { value: "1", label: "1", color: "#8fc5e2" },
+      { value: "2", label: "2", color: "#3f98cf" },
+      { value: "3", label: "3", color: "#0f6faa" },
       { value: "4", label: "4", color: "#123f7d" },
     ],
   },
@@ -783,8 +809,28 @@ const EO_CONTINUOUS_LEGENDS: Record<string, ContinuousLegendConfig> = {
       [1, "#3b0764"],
     ],
   },
+  "earth-observation-artificial-land-cover-100m": {
+    label: "Artificial land cover share",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
   "earth-observation-nighttime-lights": {
     label: "Nighttime lights",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-nighttime-lights-100m": {
+    label: "Nighttime lights score",
     stops: [
       [0, "#f5f3ff"],
       [0.25, "#c4b5fd"],
@@ -1057,6 +1103,15 @@ function publicTransportCategoryLegend(layer: PublicMilanLayer) {
 }
 
 function categoricalLegendColorExpression(legend: CategoricalLegendConfig) {
+  if (legend.classes.every((item) => item.max === undefined)) {
+    return [
+      "match",
+      ["to-string", ["get", legend.property]],
+      ...legend.classes.flatMap((item) => [item.value, item.color]),
+      VULNERABILITY_NO_DATA_COLOR,
+    ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
+  }
+
   const valueExpression = ["to-number", ["get", legend.property], -1];
   const thresholds = legend.classes.flatMap((item) =>
     item.max === undefined ? [] : [["<=", valueExpression, item.max], item.color],
@@ -1279,13 +1334,22 @@ function interpolateHexColor(
 
 function publicTransportCategoricalColorFromValue(
   layer: PublicMilanLayer,
-  value: number,
+  value: unknown,
 ) {
   const legend = publicTransportCategoryLegend(layer);
-  if (!legend || !Number.isFinite(value) || value < 0) return null;
+  if (!legend) return null;
+
+  if (legend.classes.every((item) => item.max === undefined)) {
+    const valueText = String(value ?? "");
+
+    return legend.classes.find((item) => item.value === valueText)?.color ?? null;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) return null;
 
   return (
-    legend.classes.find((item) => item.max !== undefined && value <= item.max)
+    legend.classes.find((item) => item.max !== undefined && numericValue <= item.max)
       ?.color ??
     legend.classes[legend.classes.length - 1]?.color ??
     null
@@ -2107,7 +2171,7 @@ function featurePrimaryColor(feature: SelectedFeature) {
   if (feature.layer.group === "ptal") {
     const categoricalLegend = publicTransportCategoryLegend(feature.layer);
     if (categoricalLegend) {
-      const categoricalValue = Number(source[categoricalLegend.property]);
+      const categoricalValue = source[categoricalLegend.property];
       const categoricalColor = publicTransportCategoricalColorFromValue(
         feature.layer,
         categoricalValue,
@@ -4921,7 +4985,10 @@ function AnalysisChatBox({
         className,
       )}
     >
-      <ScrollArea className="min-h-0 flex-1 overflow-x-hidden rounded-2xl bg-muted/25">
+      <ScrollArea
+        data-analysis-chat-scroll
+        className="min-h-[16rem] max-h-[min(30rem,calc(100vh-18rem))] flex-1 overflow-x-hidden rounded-2xl bg-muted/25"
+      >
         <div className="flex min-w-0 flex-col gap-5 p-4">
           {messages.slice(-6).map((message, index) => (
             <div
@@ -5104,18 +5171,7 @@ function ChatMessageContent({
     <div className="flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden">
       {blocks.map((block, index) => {
         if (block.type === "math") {
-          return (
-            <div
-              key={index}
-              data-analysis-math-block
-              className={cn(
-                "max-w-full overflow-x-auto rounded-xl bg-muted/60 px-3 py-2 font-mono text-[12px] leading-6 whitespace-pre text-foreground",
-                muted && "bg-primary-foreground/10 text-primary-foreground",
-              )}
-            >
-              {block.text}
-            </div>
-          );
+          return <FormulaBlock key={index} text={block.text} muted={muted} />;
         }
 
         if (block.type === "list") {
@@ -5130,7 +5186,7 @@ function ChatMessageContent({
               >
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex} className="pl-1">
-                    {renderInlineMarkdown(item, muted)}
+                    {renderParagraphMarkdown(item, muted)}
                   </li>
                 ))}
               </ol>
@@ -5153,7 +5209,9 @@ function ChatMessageContent({
                       muted && "text-primary-foreground",
                     )}
                   />
-                  <span>{renderInlineMarkdown(item, muted)}</span>
+                  <span className="min-w-0">
+                    {renderParagraphMarkdown(item, muted)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -5168,6 +5226,21 @@ function ChatMessageContent({
               muted={muted}
               theme={theme}
             />
+          );
+        }
+
+        if (isFormulaParagraphText(block.text)) {
+          return (
+            <div
+              key={index}
+              className={cn(
+                "text-[13px] leading-6 font-normal text-foreground/80",
+                block.emphasis && "text-foreground/90",
+                muted && "text-primary-foreground/90",
+              )}
+            >
+              {renderParagraphMarkdown(block.text, muted)}
+            </div>
           );
         }
 
@@ -5404,6 +5477,27 @@ function tableAlignmentClass(alignment: "left" | "center" | "right") {
   return "text-left";
 }
 
+function FormulaBlock({
+  text,
+  muted = false,
+}: {
+  text: string;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      data-analysis-math-block
+      data-analysis-formula-block
+      className={cn(
+        "max-h-32 max-w-full overflow-auto rounded-xl bg-muted/60 px-3 py-2 font-mono text-[12px] leading-6 whitespace-pre text-foreground overscroll-contain [scrollbar-gutter:stable]",
+        muted && "bg-primary-foreground/10 text-primary-foreground",
+      )}
+    >
+      {text}
+    </div>
+  );
+}
+
 function renderParagraphMarkdown(text: string, muted = false) {
   const labelMatch =
     text.match(/^\*\*([^*]{2,96}:)\*\*\s*(.*)$/) ??
@@ -5412,6 +5506,7 @@ function renderParagraphMarkdown(text: string, muted = false) {
   if (labelMatch) {
     const label = labelMatch[1];
     const body = labelMatch[2] ?? "";
+    const formula = isFormulaLabel(label) ? extractInlineFormula(body) : null;
 
     return (
       <>
@@ -5423,12 +5518,48 @@ function renderParagraphMarkdown(text: string, muted = false) {
         >
           {label}
         </strong>
-        {body ? <> {renderInlineMarkdown(body, muted)}</> : null}
+        {formula ? (
+          <div className="mt-2">
+            <FormulaBlock text={formula} muted={muted} />
+          </div>
+        ) : body ? (
+          <> {renderInlineMarkdown(body, muted)}</>
+        ) : null}
       </>
     );
   }
 
   return renderInlineMarkdown(text, muted);
+}
+
+function isFormulaLabel(label: string) {
+  return label.replace(/\*/g, "").trim().toLowerCase() === "formula:";
+}
+
+function isFormulaParagraphText(text: string) {
+  const labelMatch =
+    text.match(/^\*\*([^*]{2,96}:)\*\*\s*(.*)$/) ??
+    text.match(/^([^:]{2,96}:)\s+(.+)$/);
+
+  return Boolean(labelMatch && isFormulaLabel(labelMatch[1]));
+}
+
+function extractInlineFormula(text: string) {
+  const trimmed = text.trim();
+  const dollarMatch =
+    trimmed.match(/^\$([\s\S]+)\$$/) ?? trimmed.match(/\$([\s\S]+?)\$/);
+  if (dollarMatch?.[1]) return dollarMatch[1].trim();
+
+  const parenMatch =
+    trimmed.match(/^\\\(([\s\S]+)\\\)$/) ??
+    trimmed.match(/\\\(([\s\S]+?)\\\)/);
+  if (parenMatch?.[1]) return parenMatch[1].trim();
+
+  if (/\\(?:times|frac|sum|sqrt|le|ge)|[A-Za-z0-9)]\s*=\s*|_/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
 }
 
 function renderInlineMarkdown(text: string, muted = false) {
@@ -5464,7 +5595,7 @@ function renderInlineMarkdown(text: string, muted = false) {
           key={index}
           data-analysis-inline-math
           className={cn(
-            "rounded bg-muted px-1.5 py-0.5 font-mono text-[0.92em] text-foreground",
+            "inline-flex max-w-full overflow-x-auto rounded bg-muted px-1.5 py-0.5 align-middle font-mono text-[0.92em] text-foreground whitespace-nowrap",
             muted && "bg-primary-foreground/15 text-primary-foreground",
           )}
         >

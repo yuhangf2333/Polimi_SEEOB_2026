@@ -77,6 +77,8 @@ test("analysis chat keeps long questions and markdown tables within the narrow p
   assert.match(source, /overflow-auto overscroll-contain/);
   assert.match(source, /break-words/);
   assert.match(source, /data-analysis-table-rail/);
+  assert.match(source, /data-analysis-chat-scroll/);
+  assert.match(source, /max-h-\[min\(30rem,calc\(100vh-18rem\)\)\]/);
 });
 
 test("analysis markdown tables render in a bounded chat-width table viewport", async () => {
@@ -105,6 +107,9 @@ test("analysis chat renders formula math blocks and inline math", async () => {
   assert.match(source, /block\.type === "math"/);
   assert.match(source, /data-analysis-math-block/);
   assert.match(source, /data-analysis-inline-math/);
+  assert.match(source, /data-analysis-formula-block/);
+  assert.match(source, /function isFormulaLabel/);
+  assert.match(source, /function extractInlineFormula/);
   assert.match(source, /\\\$\[\^\$\\n\]\+\\\$/);
   assert.match(source, /Use markdown math for formulas/);
 });
@@ -141,7 +146,7 @@ test("analysis chat keeps markdown lists as simple readable lists", async () => 
   assert.match(source, /<ol\s+key=\{index\}/);
   assert.match(source, /<ul\s+key=\{index\}/);
   assert.match(source, /list-decimal/);
-  assert.match(source, /renderInlineMarkdown\(item, muted\)/);
+  assert.match(source, /renderParagraphMarkdown\(item, muted\)/);
   assert.doesNotMatch(source, /function AnalysisBulletCardList/);
   assert.doesNotMatch(source, /function AnalysisStepList/);
   assert.doesNotMatch(source, /data-analysis-card-list/);
@@ -235,7 +240,9 @@ test("strict component layers use the correct continuous and categorical legends
     "earth-observation-population-demand",
     "earth-observation-built-up-density",
     "earth-observation-artificial-land-cover",
+    "earth-observation-artificial-land-cover-100m",
     "earth-observation-nighttime-lights",
+    "earth-observation-nighttime-lights-100m",
     "earth-observation-road-density",
     "earth-observation-intersection-density",
     "earth-observation-road-connectivity",
@@ -258,11 +265,15 @@ test("strict component layers use the correct continuous and categorical legends
   assert.match(source, /"ptal-ptal-component": \{[\s\S]*label: "Public Transport Accessibility Level \(PTAL\)"/);
   assert.match(source, /"ptal-ptal-detailed": \{[\s\S]*label: "Public Transport Accessibility Level \(PTAL, 250m\)"/);
   assert.match(source, /"ptal-ptal-detailed": \{[\s\S]*property: "ptal_order"/);
+  assert.match(source, /"ptal-ptal-100m-gtfs-netex": \{[\s\S]*label: "Public Transport Accessibility Level \(PTAL, 100m GTFS\/NeTEx\)"/);
+  assert.match(source, /"ptal-ptal-100m-gtfs-netex": \{[\s\S]*property: "ptal"/);
   assert.match(source, /"ptal-ptal-component": \{[\s\S]*label: "1a"/);
   assert.match(source, /"ptal-ptal-component": \{[\s\S]*label: "6b"/);
   assert.match(source, /"ptal-ptol-component": \{[\s\S]*label: "Public Transport Opportunity Level \(PTOL\)"/);
   assert.match(source, /"ptal-ptol-detailed": \{[\s\S]*label: "Public Transport Opportunity Level \(PTOL, 250m\)"/);
   assert.match(source, /"ptal-ptol-detailed": \{[\s\S]*property: "ptol"/);
+  assert.match(source, /"ptal-ptol-100m-gtfs-netex": \{[\s\S]*label: "Public Transport Opportunity Level \(PTOL, 100m GTFS\/NeTEx\)"/);
+  assert.match(source, /"ptal-ptol-100m-gtfs-netex": \{[\s\S]*property: "ptol"/);
   assert.match(source, /"ptal-ptol-component": \{[\s\S]*label: "4"/);
   assert.match(source, /publicTransportCategoryColor/);
   assert.match(source, /publicTransportCategoricalColorFromValue/);

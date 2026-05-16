@@ -665,6 +665,12 @@ export function AppSidebar({
             isActive: activeLayerId === "ptal-ptal-detailed",
           },
           {
+            title: "PTAL 100m GTFS/NeTEx",
+            url: "#",
+            layerId: "ptal-ptal-100m-gtfs-netex",
+            isActive: activeLayerId === "ptal-ptal-100m-gtfs-netex",
+          },
+          {
             title: "PTOL component",
             url: "#",
             layerId: "ptal-ptol-component",
@@ -675,6 +681,12 @@ export function AppSidebar({
             url: "#",
             layerId: "ptal-ptol-detailed",
             isActive: activeLayerId === "ptal-ptol-detailed",
+          },
+          {
+            title: "PTOL 100m GTFS/NeTEx",
+            url: "#",
+            layerId: "ptal-ptol-100m-gtfs-netex",
+            isActive: activeLayerId === "ptal-ptol-100m-gtfs-netex",
           },
           {
             title: "PTAL/PTOL component",
@@ -780,10 +792,25 @@ export function AppSidebar({
               activeLayerId === "earth-observation-artificial-land-cover",
           },
           {
+            title: "Artificial land cover 100m",
+            url: "#",
+            layerId: "earth-observation-artificial-land-cover-100m",
+            isActive:
+              activeLayerId ===
+              "earth-observation-artificial-land-cover-100m",
+          },
+          {
             title: "Nighttime lights",
             url: "#",
             layerId: "earth-observation-nighttime-lights",
             isActive: activeLayerId === "earth-observation-nighttime-lights",
+          },
+          {
+            title: "Nighttime lights 100m",
+            url: "#",
+            layerId: "earth-observation-nighttime-lights-100m",
+            isActive:
+              activeLayerId === "earth-observation-nighttime-lights-100m",
           },
           {
             title: "Road density",

@@ -48,8 +48,10 @@ test("analytical sections expose the requested strict summary and component laye
       ["ptal-line-availability", "h3_pt_line_availability.geojson", "LA"],
       ["ptal-ptal-component", "h3_ptal_component.geojson", "PTAL_component"],
       ["ptal-ptal-detailed", "milan_metropolitan_ptal_250m.geojson", "ptal_order"],
+      ["ptal-ptal-100m-gtfs-netex", "ptal_4_8_h3_100m_gtfs_netex_web.geojson", "ptal"],
       ["ptal-ptol-component", "h3_ptol_component.geojson", "PTOL_component"],
       ["ptal-ptol-detailed", "milan_metropolitan_ptol_official_250m.geojson", "ptol"],
+      ["ptal-ptol-100m-gtfs-netex", "ptol_4_8_h3_100m_gtfs_netex_web.geojson", "ptol"],
       ["ptal-ptal-ptol-component", "h3_ptal_ptol_component.geojson", "PTAL_PTOL"],
       ["ptal-stops-all", "stops_all_gtfs_netex.geojson", undefined],
     ],
@@ -67,7 +69,9 @@ test("analytical sections expose the requested strict summary and component laye
       ["earth-observation-population-demand", "h3_population_demand.geojson", "P"],
       ["earth-observation-built-up-density", "h3_built_up_density.geojson", "B"],
       ["earth-observation-artificial-land-cover", "h3_artificial_land_cover.geojson", "A"],
+      ["earth-observation-artificial-land-cover-100m", "eo_artificial_land_cover_100m.geojson", "landcover_artificial_share"],
       ["earth-observation-nighttime-lights", "h3_night_time_lights.geojson", "L"],
+      ["earth-observation-nighttime-lights-100m", "eo_night_lights_sdgsat1_100m_fast.geojson", "ntl_sdgsat1_lh_score"],
       ["earth-observation-road-density", "h3_road_density.geojson", "RoadDensity"],
       ["earth-observation-intersection-density", "h3_intersection_density.geojson", "IntersectionDensity"],
       ["earth-observation-road-connectivity", "h3_road_connectivity.geojson", "R"],
@@ -124,6 +128,24 @@ test("vulnerability layers use distinct palettes and keep no-population cells av
   );
 
   assert.ok(noPopulationCells.length > 1000, "expected explicit no-population H3 cells");
+});
+
+test("essential service points use lon-lat coordinates visible to MapLibre", async () => {
+  const source = JSON.parse(
+    await readFile(
+      new URL("../data/geojson/services/milan_essential_services_points.geojson", import.meta.url),
+      "utf8",
+    ),
+  );
+
+  assert.ok(source.features.length > 1000, "service point layer should contain points");
+
+  for (const feature of source.features.slice(0, 100)) {
+    const [lon, lat] = feature.geometry?.coordinates ?? [];
+
+    assert.ok(lon >= 8 && lon <= 10, `expected longitude near Milan, got ${lon}`);
+    assert.ok(lat >= 45 && lat <= 46, `expected latitude near Milan, got ${lat}`);
+  }
 });
 
 test("analysis section points to strict final-score layers", async () => {
@@ -243,17 +265,13 @@ test("old GeoJSON layer assets are removed from the active data tree", async () 
     "../data/geojson/vulnerability/milan_vulnerability_index_100m_fast.geojson",
     "../data/geojson/vulnerability/milan_vulnerability_index_100m_web.geojson",
     "../data/geojson/ptal/ptal_4_8_h3_100m_gtfs_netex_fast.geojson",
-    "../data/geojson/ptal/ptal_4_8_h3_100m_gtfs_netex_web.geojson",
     "../data/geojson/ptal/ptol_4_8_h3_100m_gtfs_netex_fast.geojson",
-    "../data/geojson/ptal/ptol_4_8_h3_100m_gtfs_netex_web.geojson",
     "../data/geojson/ptal/old_ptd.geojson",
     "../data/geojson/services/service_points_all.geojson",
     "../data/geojson/services/essential_services_accessibility_h3_res9.geojson",
     "../data/geojson/services/essential_services_accessibility_h3_res9_fast.geojson",
-    "../data/geojson/earth-observation/eo_night_lights_sdgsat1_100m_fast.geojson",
     "../data/geojson/earth-observation/eo_night_lights_sdgsat1_100m.geojson",
     "../data/geojson/earth-observation/eo_artificial_land_cover_100m_fast.geojson",
-    "../data/geojson/earth-observation/eo_artificial_land_cover_100m.geojson",
     "../data/geojson/earth-observation/eo_green_open_land_cover_100m_fast.geojson",
     "../data/geojson/earth-observation/eo_green_open_land_cover_100m.geojson",
     "../data/geojson/earth-observation/eo_built_up_density_100m_fast.geojson",
