@@ -78,7 +78,20 @@ test("analysis chat keeps long questions and markdown tables within the narrow p
   assert.match(source, /break-words/);
   assert.match(source, /data-analysis-table-rail/);
   assert.match(source, /data-analysis-chat-scroll/);
-  assert.match(source, /max-h-\[min\(30rem,calc\(100vh-18rem\)\)\]/);
+  assert.match(source, /max-h-\[min\(18rem,calc\(100vh-24rem\)\)\]/);
+});
+
+test("analysis chat message area does not stretch empty content across the full panel", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /<AnalysisChatBox\s+className="min-h-0"/);
+  assert.doesNotMatch(source, /<AnalysisChatBox\s+className="min-h-0 flex-1"/);
+  assert.doesNotMatch(
+    source,
+    /data-analysis-chat-scroll[\s\S]{0,180}flex-1/,
+  );
+  assert.doesNotMatch(source, /min-h-\[16rem\]/);
+  assert.match(source, /data-analysis-chat-scroll[\s\S]{0,180}max-h-\[min\(18rem,calc\(100vh-24rem\)\)\]/);
 });
 
 test("analysis markdown tables render in a bounded chat-width table viewport", async () => {
@@ -415,4 +428,11 @@ test("geojson selected feature cleanup tolerates missing map sources during relo
     cleanupSource,
     /if \(currentFeatureId == null \|\| !map\.getSource\(sourceId\)\) return;\s*\n\s*try \{/,
   );
+});
+
+test("map style changes do not force a full map remount that drops active layers", async () => {
+  const source = await loadDashboardSource();
+
+  assert.doesNotMatch(source, /key=\{`\$\{theme\}-\$\{basemap\}`\}/);
+  assert.doesNotMatch(source, /key=\{`analysis-dashboard-\$\{theme\}`\}/);
 });

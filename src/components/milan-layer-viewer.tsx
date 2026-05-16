@@ -3724,7 +3724,6 @@ function AnalysisDashboard({
             <div className="relative h-full overflow-hidden rounded-xl bg-muted">
               {priorityLayer ? (
                 <GeoMap
-                  key={`analysis-dashboard-${theme}`}
                   theme={theme}
                   center={[9.19, 45.47]}
                   zoom={9.2}
@@ -3766,7 +3765,7 @@ function AnalysisDashboard({
           <CardContent className="flex h-full min-h-0 min-w-0 flex-col gap-3 p-0">
             {panelMode === "chat" && llmSettings.enabled ? (
               <AnalysisChatBox
-                className="min-h-0 flex-1"
+                className="min-h-0"
                 dashboardContext={dashboardContext}
                 llmSettings={llmSettings}
                 theme={theme}
@@ -4987,7 +4986,7 @@ function AnalysisChatBox({
     >
       <ScrollArea
         data-analysis-chat-scroll
-        className="min-h-[16rem] max-h-[min(30rem,calc(100vh-18rem))] flex-1 overflow-x-hidden rounded-2xl bg-muted/25"
+        className="max-h-[min(18rem,calc(100vh-24rem))] flex-none overflow-x-hidden rounded-2xl bg-muted/25"
       >
         <div className="flex min-w-0 flex-col gap-5 p-4">
           {messages.slice(-6).map((message, index) => (
@@ -6317,7 +6316,6 @@ function MilanMapCanvas({
         onClose={onCloseDetail}
       />
       <GeoMap
-        key={`${theme}-${basemap}`}
         theme={theme}
         center={[9.19, 45.47]}
         zoom={9.2}
