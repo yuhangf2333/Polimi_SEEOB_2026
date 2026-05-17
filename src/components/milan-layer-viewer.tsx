@@ -53,6 +53,10 @@ import {
   type LlmSettings,
 } from "@/lib/llm-settings";
 import { parseChatMarkdown, type ChatMarkdownBlock } from "@/lib/chat-markdown";
+import {
+  normalizeFormulaText,
+  tokenizeFormulaText,
+} from "@/lib/formula-rendering.mjs";
 import { cn } from "@/lib/utils";
 import type {
   LayerGroupId,
@@ -105,6 +109,7 @@ type SelectedFeature = {
 type FeatureDetailMode = "overview" | "advanced";
 type AnalysisPanelMode = "summary" | "chat";
 type ChatMarkdownTableBlock = Extract<ChatMarkdownBlock, { type: "table" }>;
+type FormulaToken = { type: "text" | "sub" | "sup"; text: string };
 
 type FeatureOverviewEntry = {
   key: string;
@@ -3797,7 +3802,7 @@ function AnalysisDashboard({
           <CardContent className="flex h-full min-h-0 min-w-0 flex-col gap-3 p-0">
             {panelMode === "chat" && llmSettings.enabled ? (
               <AnalysisChatBox
-                className="min-h-0"
+                className="h-full min-h-0"
                 dashboardContext={dashboardContext}
                 llmSettings={llmSettings}
                 theme={theme}
@@ -5017,14 +5022,15 @@ function AnalysisChatBox({
 
   return (
     <div
+      data-analysis-chat-box
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/95 p-4 shadow-sm ring-1 ring-border/50 backdrop-blur",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-background/95 p-4 shadow-sm ring-1 ring-border/50 backdrop-blur",
         className,
       )}
     >
       <ScrollArea
         data-analysis-chat-scroll
-        className="max-h-[min(16rem,calc(100svh-22rem))] flex-none overflow-x-hidden rounded-2xl bg-muted/25"
+        className="min-h-0 max-h-[min(16rem,calc(100svh-22rem))] flex-none overflow-x-hidden rounded-2xl bg-muted/25 lg:max-h-none lg:flex-1"
       >
         <div className="flex min-w-0 flex-col gap-5 p-4">
           {messages.slice(-6).map((message, index) => (
@@ -5071,7 +5077,10 @@ function AnalysisChatBox({
         </div>
       </ScrollArea>
 
-      <div className="mt-3 overflow-hidden rounded-2xl bg-background/90 shadow-sm ring-1 ring-border/50">
+      <div
+        data-analysis-chat-presets
+        className="mt-3 shrink-0 overflow-hidden rounded-2xl bg-background/90 shadow-sm ring-1 ring-border/50"
+      >
         <Button
           type="button"
           variant="ghost"
@@ -5127,7 +5136,10 @@ function AnalysisChatBox({
         ) : null}
       </div>
 
-      <div className="mt-3 flex min-h-[104px] flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60">
+      <div
+        data-analysis-chat-input
+        className="mt-3 flex min-h-[104px] shrink-0 flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60"
+      >
         <div className="min-h-0 flex-1">
           <Textarea
             ref={promptRef}
@@ -5526,12 +5538,53 @@ function FormulaBlock({
       data-analysis-math-block
       data-analysis-formula-block
       className={cn(
-        "max-h-32 max-w-full overflow-auto rounded-xl bg-muted/60 px-3 py-2 font-mono text-[12px] leading-6 whitespace-pre text-foreground overscroll-contain [scrollbar-gutter:stable]",
+        "max-h-36 max-w-full overflow-auto rounded-xl bg-muted/60 px-3 py-2 text-[13px] leading-7 text-foreground whitespace-pre-wrap break-words overscroll-contain [overflow-wrap:anywhere] [scrollbar-gutter:stable]",
         muted && "bg-primary-foreground/10 text-primary-foreground",
       )}
+      aria-label={normalizeFormulaText(text)}
     >
-      {text}
+      <FormulaText text={text} muted={muted} />
     </div>
+  );
+}
+
+function FormulaText({
+  text,
+  muted = false,
+}: {
+  text: string;
+  muted?: boolean;
+}) {
+  const tokens = tokenizeFormulaText(text) as FormulaToken[];
+
+  return (
+    <span
+      data-analysis-formula-rendered
+      className={cn(
+        "font-medium tracking-normal text-inherit tabular-nums",
+        muted && "text-primary-foreground",
+      )}
+    >
+      {tokens.map((token, index) => {
+        if (token.type === "sub") {
+          return (
+            <sub key={index} className="text-[0.72em] leading-none">
+              {token.text}
+            </sub>
+          );
+        }
+
+        if (token.type === "sup") {
+          return (
+            <sup key={index} className="text-[0.72em] leading-none">
+              {token.text}
+            </sup>
+          );
+        }
+
+        return <React.Fragment key={index}>{token.text}</React.Fragment>;
+      })}
+    </span>
   );
 }
 
@@ -5628,16 +5681,16 @@ function renderInlineMarkdown(text: string, muted = false) {
         : part.slice(2, -2);
 
       return (
-        <code
+        <span
           key={index}
           data-analysis-inline-math
           className={cn(
-            "inline-flex max-w-full overflow-x-auto rounded bg-muted px-1.5 py-0.5 align-middle font-mono text-[0.92em] text-foreground whitespace-nowrap",
+            "inline-flex max-w-full overflow-x-auto rounded bg-muted px-1.5 py-0.5 align-middle text-[0.92em] text-foreground whitespace-nowrap",
             muted && "bg-primary-foreground/15 text-primary-foreground",
           )}
         >
-          {textContent}
-        </code>
+          <FormulaText text={textContent} muted={muted} />
+        </span>
       );
     }
 

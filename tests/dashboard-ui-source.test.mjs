@@ -104,15 +104,15 @@ test("analysis dashboard uses shorter mobile panels so AI controls stay reachabl
   assert.doesNotMatch(source, /order-3 min-h-\[22rem\] lg:order-none/);
 });
 
-test("analysis chat message area does not stretch empty content across the full panel", async () => {
+test("analysis chat fills the desktop side panel while keeping controls pinned", async () => {
   const source = await loadDashboardSource();
 
-  assert.match(source, /<AnalysisChatBox\s+className="min-h-0"/);
-  assert.doesNotMatch(source, /<AnalysisChatBox\s+className="min-h-0 flex-1"/);
-  assert.doesNotMatch(
-    source,
-    /data-analysis-chat-scroll[\s\S]{0,180}flex-1/,
-  );
+  assert.match(source, /<AnalysisChatBox\s+className="h-full min-h-0"/);
+  assert.match(source, /data-analysis-chat-box/);
+  assert.match(source, /data-analysis-chat-scroll[\s\S]{0,220}lg:max-h-none/);
+  assert.match(source, /data-analysis-chat-scroll[\s\S]{0,220}lg:flex-1/);
+  assert.match(source, /data-analysis-chat-presets/);
+  assert.match(source, /data-analysis-chat-input/);
   assert.match(source, /data-analysis-chat-scroll[\s\S]{0,180}max-h-\[min\(16rem,calc\(100svh-22rem\)\)\]/);
 });
 
@@ -140,9 +140,13 @@ test("analysis chat renders formula math blocks and inline math", async () => {
   const source = await loadDashboardSource();
 
   assert.match(source, /block\.type === "math"/);
+  assert.match(source, /tokenizeFormulaText/);
+  assert.match(source, /data-analysis-formula-rendered/);
   assert.match(source, /data-analysis-math-block/);
   assert.match(source, /data-analysis-inline-math/);
   assert.match(source, /data-analysis-formula-block/);
+  assert.doesNotMatch(source, /font-mono text-\[12px\] leading-6 whitespace-pre/);
+  assert.doesNotMatch(source, /\{textContent\}\s*<\/code>/);
   assert.match(source, /function isFormulaLabel/);
   assert.match(source, /function extractInlineFormula/);
   assert.match(source, /\\\$\[\^\$\\n\]\+\\\$/);
