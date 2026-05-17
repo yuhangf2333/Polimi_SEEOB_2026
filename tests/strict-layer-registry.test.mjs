@@ -26,7 +26,7 @@ test("public layer groups omit base context while keeping the boundary available
 });
 
 test("analytical sections expose the requested strict summary and component layers", async () => {
-  const { getLayerGroups } = await loadLayerRegistry();
+  const { getLayerById, getLayerGroups } = await loadLayerRegistry();
   const groups = new Map(getLayerGroups().map((group) => [group.id, group]));
 
   const expectations = {
@@ -46,13 +46,8 @@ test("analytical sections expose the requested strict summary and component laye
       ["ptal-public-transport-deficit", "h3_public_transport_deficit.geojson", "PTD"],
       ["ptal-service-frequency", "h3_pt_service_frequency.geojson", "FR"],
       ["ptal-line-availability", "h3_pt_line_availability.geojson", "LA"],
-      ["ptal-ptal-component", "h3_ptal_component.geojson", "PTAL_component"],
-      ["ptal-ptal-detailed", "milan_metropolitan_ptal_250m.geojson", "ptal_order"],
       ["ptal-ptal-100m-gtfs-netex", "ptal_4_8_h3_100m_gtfs_netex_web.geojson", "ptal"],
-      ["ptal-ptol-component", "h3_ptol_component.geojson", "PTOL_component"],
-      ["ptal-ptol-detailed", "milan_metropolitan_ptol_official_250m.geojson", "ptol"],
       ["ptal-ptol-100m-gtfs-netex", "ptol_4_8_h3_100m_gtfs_netex_web.geojson", "ptol"],
-      ["ptal-ptal-ptol-component", "h3_ptal_ptol_component.geojson", "PTAL_PTOL"],
       ["ptal-stops-all", "stops_all_gtfs_netex.geojson", undefined],
     ],
     services: [
@@ -96,6 +91,36 @@ test("analytical sections expose the requested strict summary and component laye
   assert.equal(
     groups.get("ptal").layers.find((layer) => layer.id === "ptal-public-transport-deficit").defaultVisible,
     true,
+  );
+  assert.equal(
+    groups.get("ptal").layers.find((layer) => layer.id === "ptal-ptal-100m-gtfs-netex").name,
+    "ptal",
+  );
+  assert.equal(
+    groups.get("ptal").layers.find((layer) => layer.id === "ptal-ptol-100m-gtfs-netex").name,
+    "ptol",
+  );
+  assert.ok(
+    !groups.get("ptal").layers.some((layer) =>
+      [
+        "ptal-ptal-component",
+        "ptal-ptal-detailed",
+        "ptal-ptol-component",
+        "ptal-ptol-detailed",
+        "ptal-ptal-ptol-component",
+      ].includes(layer.id),
+    ),
+    "screenshot-only PTAL/PTOL component and detailed layers should be hidden from layer groups",
+  );
+  assert.ok(
+    [
+      "ptal-ptal-component",
+      "ptal-ptal-detailed",
+      "ptal-ptol-component",
+      "ptal-ptol-detailed",
+      "ptal-ptal-ptol-component",
+    ].every((id) => getLayerById(id)),
+    "hidden PTAL/PTOL layers should remain registered for direct access",
   );
   assert.equal(
     groups.get("services").layers.find((layer) => layer.id === "services-essential-service-deficit").defaultVisible,

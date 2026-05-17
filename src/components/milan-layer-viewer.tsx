@@ -1000,7 +1000,7 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "Which stops and routes matter?",
         prompt:
-          "Which stops and routes matter here? Use city2graph route and stop dependency evidence when available.",
+          "Which stops and routes matter here? Use route and stop dependency evidence when available.",
       },
       {
         label: "Which services are hardest to reach?",
@@ -1052,7 +1052,7 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "What should be done first here?",
         prompt:
-          "What should be done first here? Recommend the first planning action using dominant drivers, suggested intervention family, and city2graph evidence.",
+          "What should be done first here? Recommend the first planning action using dominant drivers, suggested intervention family, and transit dependency evidence.",
       },
       {
         label: "Give me a priority action table.",
@@ -1078,7 +1078,7 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "Where do these data come from?",
         prompt:
-          "Where do the dashboard data come from? Answer simply by source family: social vulnerability, public transport, essential services, earth observation, city2graph, and boundary/grid processing. Include the main caveat for each family.",
+          "Where do the dashboard data come from? Answer simply by source family: social vulnerability, public transport, essential services, earth observation, route/stop dependency evidence, and boundary/grid processing. Include the main caveat for each family.",
       },
       {
         label: "How should I use these data?",
@@ -1093,7 +1093,7 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "What should be validated first?",
         prompt:
-          "What data should be validated first before using these results for intervention planning? Prioritize transit feeds, service points, vulnerability inputs, EO proxies, and city2graph/walking evidence.",
+          "What data should be validated first before using these results for intervention planning? Prioritize transit feeds, service points, vulnerability inputs, EO proxies, and route/stop dependency plus walking-network evidence.",
       },
     ],
   },

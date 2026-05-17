@@ -450,15 +450,15 @@ function formatCity2graphRelationshipContext({
   sources,
 }: Omit<City2graphRelationshipContext, "contextText">) {
   const parts = [
-    `[city2graph-relationships] Structured current H3 transit dependency relationships`,
-    `Source files: ${sources.map((source) => source.id).join(", ")}`,
+    `[transit-dependency-relationships] Structured current H3 Transit dependency relationships`,
+    `Source evidence: transit summary, route and stop dependency evidence${sources.some((source) => source.id.includes("nearest-walking-access")) ? ", nearest walking-access grid" : ""}`,
     `H3: ${h3Id}`,
   ];
 
   if (summary) {
     parts.push(
       [
-        `Transit diagnosis: ${summary.transitDependencyDiagnosis ?? "n/a"}.`,
+        `Transit dependency summary: ${summary.transitDependencyDiagnosis ?? "n/a"}.`,
         `Primary route: ${summary.primaryRouteLine ?? "n/a"} (${summary.primaryRouteMode ?? "n/a"}, ${summary.primaryRouteOperator ?? "n/a"}) with ${formatShare(summary.primaryRouteDependencyShare)} dependency share.`,
         `Primary stop: ${summary.primaryStopId ?? "n/a"} with ${formatShare(summary.primaryStopDependencyShare)} dependency share.`,
         `Network evidence: ${formatCount(summary.routeCount)} routes, ${formatCount(summary.stopCount)} stops, ${formatCount(summary.modeCount)} modes, mean wait ${formatMinutes(summary.meanWaitMin)}, mean walk ${formatMinutes(summary.meanWalkMin)}, redundancy score ${formatNumber(summary.transitDependencyRedundancyScore)}.`,

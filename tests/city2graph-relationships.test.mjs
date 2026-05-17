@@ -45,6 +45,25 @@ test("retrieveCity2graphRelationships reads summary and top route/stop edges for
   assert.match(result.contextText, /Multimodal supported/);
 });
 
+test("retrieveCity2graphRelationships keeps internal engine names out of public context text", async () => {
+  const { retrieveCity2graphRelationships } = await loadCity2graphRelationships();
+
+  const result = await retrieveCity2graphRelationships({
+    dataRoot: fixtureDataRoot,
+    context: {
+      scope: {
+        h3_id: "891f99564c7ffff",
+      },
+    },
+    limit: 2,
+  });
+
+  assert.ok(result);
+  assert.doesNotMatch(result.contextText, /city2graph/i);
+  assert.match(result.contextText, /Transit dependency relationships/);
+  assert.match(result.contextText, /route and stop dependency evidence/i);
+});
+
 test("retrieveCity2graphRelationships adds nearest walking-access evidence from selected coordinate", async () => {
   const { retrieveCity2graphRelationships } = await loadCity2graphRelationships();
 

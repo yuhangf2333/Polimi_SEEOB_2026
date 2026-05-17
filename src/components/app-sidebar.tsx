@@ -653,46 +653,16 @@ export function AppSidebar({
             isActive: activeLayerId === "ptal-line-availability",
           },
           {
-            title: "PTAL component",
-            url: "#",
-            layerId: "ptal-ptal-component",
-            isActive: activeLayerId === "ptal-ptal-component",
-          },
-          {
-            title: "PTAL detailed 250m",
-            url: "#",
-            layerId: "ptal-ptal-detailed",
-            isActive: activeLayerId === "ptal-ptal-detailed",
-          },
-          {
-            title: "PTAL 100m GTFS/NeTEx",
+            title: "ptal",
             url: "#",
             layerId: "ptal-ptal-100m-gtfs-netex",
             isActive: activeLayerId === "ptal-ptal-100m-gtfs-netex",
           },
           {
-            title: "PTOL component",
-            url: "#",
-            layerId: "ptal-ptol-component",
-            isActive: activeLayerId === "ptal-ptol-component",
-          },
-          {
-            title: "PTOL detailed 250m",
-            url: "#",
-            layerId: "ptal-ptol-detailed",
-            isActive: activeLayerId === "ptal-ptol-detailed",
-          },
-          {
-            title: "PTOL 100m GTFS/NeTEx",
+            title: "ptol",
             url: "#",
             layerId: "ptal-ptol-100m-gtfs-netex",
             isActive: activeLayerId === "ptal-ptol-100m-gtfs-netex",
-          },
-          {
-            title: "PTAL/PTOL component",
-            url: "#",
-            layerId: "ptal-ptal-ptol-component",
-            isActive: activeLayerId === "ptal-ptal-ptol-component",
           },
           {
             title: "Stops all",

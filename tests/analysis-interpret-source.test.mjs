@@ -26,3 +26,14 @@ test("analysis interpret exposes truncation instead of silently returning incomp
   assert.match(source, /choice\?\.finish_reason === "length"/);
   assert.match(source, /reached its token limit/);
 });
+
+test("analysis interpret hides internal graph engine naming from model-facing payloads", async () => {
+  const source = await loadInterpretRouteSource();
+
+  assert.doesNotMatch(source, /city2graph_relationship_context/);
+  assert.doesNotMatch(source, /structured_city2graph_relationships/);
+  assert.match(source, /transit_dependency_context/);
+  assert.match(source, /structured_transit_dependency_relationships/);
+  assert.match(source, /sanitizePublicText/);
+  assert.match(source, /route\/stop dependency evidence/);
+});

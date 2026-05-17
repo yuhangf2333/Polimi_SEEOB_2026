@@ -104,13 +104,17 @@ test("retrieveAnalysisKnowledge answers simple data provenance and use questions
   });
 
   assert.equal(result.answerMode, "data_confidence");
-  assert.equal(result.responseGuide.mode, "data_confidence");
+  assert.equal(result.responseGuide.mode, "data_source");
   assert.equal(result.entries[0].id, "data-source-catalog");
   assert.match(result.contextText, /ISTAT 2023/);
   assert.match(result.contextText, /official GTFS/);
   assert.match(result.contextText, /Regione Lombardia/);
   assert.match(result.contextText, /GHSL GHS-POP 2025/);
   assert.match(result.contextText, /100 m grid/);
+  assert.doesNotMatch(result.contextText, /city2graph/i);
+  assert.match(result.contextText, /route\/stop dependency evidence/i);
+  assert.match(result.responseGuide.structure[0], /source families/i);
+  assert.doesNotMatch(result.responseGuide.structure.join(" "), /main confidence issue/i);
 });
 
 test("retrieveAnalysisKnowledge routes Data preset source and use prompts to provenance guidance", async () => {
@@ -123,9 +127,11 @@ test("retrieveAnalysisKnowledge routes Data preset source and use prompts to pro
   });
 
   assert.equal(result.answerMode, "data_confidence");
-  assert.equal(result.responseGuide.mode, "data_confidence");
+  assert.equal(result.responseGuide.mode, "data_source");
   assert.equal(result.entries[0].id, "data-source-catalog");
   assert.match(result.contextText, /treat the layers as screening and prioritization evidence/);
+  assert.doesNotMatch(result.contextText, /city2graph/i);
+  assert.match(result.responseGuide.structure[0], /source families/i);
 });
 
 test("retrieveAnalysisKnowledge routes PTAL caveat questions to project evidence", async () => {

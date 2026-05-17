@@ -49,6 +49,17 @@ test("analysis chat keeps the Data preset list as compact as the other categorie
   assert.doesNotMatch(dataCategory, /label: "How is DCS calculated\?"/);
 });
 
+test("analysis preset prompts use public transit dependency wording", async () => {
+  const source = await loadDashboardSource();
+  const presetSource = source.match(/const ANALYSIS_PRESET_CATEGORIES = \[[\s\S]*?\] satisfies AnalysisPresetCategory\[\];/)?.[0];
+
+  assert.ok(presetSource, "expected analysis preset category source");
+  assert.doesNotMatch(presetSource, /city2graph/i);
+  assert.match(presetSource, /route and stop dependency evidence/);
+  assert.match(presetSource, /route\/stop dependency evidence/);
+  assert.match(presetSource, /transit dependency evidence/);
+});
+
 test("analysis model pill keeps model and provider inline without a dropdown", async () => {
   const source = await loadDashboardSource();
 

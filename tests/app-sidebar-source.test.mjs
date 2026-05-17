@@ -149,13 +149,8 @@ test("sidebar lists the requested full strict layer menu", async () => {
     ["Public transport deficit", "ptal-public-transport-deficit"],
     ["Service frequency", "ptal-service-frequency"],
     ["Line availability", "ptal-line-availability"],
-    ["PTAL component", "ptal-ptal-component"],
-    ["PTAL detailed 250m", "ptal-ptal-detailed"],
-    ["PTAL 100m GTFS/NeTEx", "ptal-ptal-100m-gtfs-netex"],
-    ["PTOL component", "ptal-ptol-component"],
-    ["PTOL detailed 250m", "ptal-ptol-detailed"],
-    ["PTOL 100m GTFS/NeTEx", "ptal-ptol-100m-gtfs-netex"],
-    ["PTAL/PTOL component", "ptal-ptal-ptol-component"],
+    ["ptal", "ptal-ptal-100m-gtfs-netex"],
+    ["ptol", "ptal-ptol-100m-gtfs-netex"],
     ["Stops all", "ptal-stops-all"],
   ];
   const expectedServices = [
@@ -196,7 +191,10 @@ test("sidebar lists the requested full strict layer menu", async () => {
   }
 
   assert.doesNotMatch(vulnerabilitySource, /Gender vulnerability|vulnerability-gender/);
-  assert.doesNotMatch(publicAccessibilitySource, /old ptd|ptal-old-ptd/);
+  assert.doesNotMatch(
+    publicAccessibilitySource,
+    /old ptd|ptal-old-ptd|PTAL component|PTAL detailed 250m|PTOL component|PTOL detailed 250m|PTAL\/PTOL component/,
+  );
   assert.doesNotMatch(servicesSource, /Essential service gap/);
   assert.doesNotMatch(earthObservationSource, /SDGSAT-1 night lights|Green\/open land-cover|Urban growth 2010-2020/);
 });

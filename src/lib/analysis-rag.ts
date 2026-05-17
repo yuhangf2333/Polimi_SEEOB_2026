@@ -13,6 +13,7 @@ export type AnalysisResponseMode =
   | "comparison"
   | "methodology"
   | "validation"
+  | "data_source"
   | "data_confidence"
   | "overview";
 
@@ -179,7 +180,7 @@ const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
       "\u8fd9\u4e9b\u6570\u636e\u600e\u4e48\u7528\uff1f",
     ],
     content:
-      "Use this entry for simple provenance questions such as \"where does this data come from?\" or Chinese questions asking where the data come from or how to use them. The WebGIS does not display raw live feeds directly. Source data are cleaned, validated, computed on a 100 m grid, aggregated to H3 resolution 9 for WebGIS, and then joined to dashboard/report fields. Social vulnerability/SVI uses ISTAT 2023 census-section variables joined to ISTAT Lombardia 2021 census-section geometry; MEF/Dipartimento delle Finanze 2024 IRPEF income and ACI Autoritratto 2024 motorization are contextual/proxy supplements where used. Public transport/PTAL/PTOL/PTD uses official GTFS feeds from ATM/Comune di Milano/AMAT, Agenzia TPL Area di Milano operators Airpullman, Movibus, STAR Mobility and STAV, Agenzia TPL Area di Monza e Brianza NET, Regione Lombardia/Trenord rail GTFS, plus Lombardia NAP NeTEx supplement; the main service window is weekday 08:15-09:15 and missing feeds include Autoguidovie and STIE in relevant areas. Essential services uses Regione Lombardia/open data service records for healthcare structures, pharmacies, schools, jobs/local units and official large food retail, plus OpenStreetMap/Overpass grocery shops; current processed counts are 62 healthcare structures, 826 pharmacies, 1,341 schools, 106 official large food retail points, 2,446 OSM grocery points and 134 job municipalities. Jobs are municipality-level proxies, not workplace points. EO/territorial context uses GHSL GHS-POP 2025 100 m, GHSL GHS-BUILT-S 2000/2010/2020 100 m, ESA WorldCover 2021 10 m, PCNL 2024 night-time lights, GHS-SDGSAT-1 Po Plain stationary night-time lights 2022-2023, and OpenStreetMap road network via OSMnx. city2graph evidence is derived from GTFS/NeTEx stop-route-service records and walking-network nearest-grid relationships; it explains transit dependency and validation needs but does not replace the main score formula. Boundary/grid processing uses Citta Metropolitana di Milano boundary evidence from Regione Lombardia/open administrative sources or OSM/Nominatim relation 44881. How to use: treat the layers as screening and prioritization evidence, not final intervention proof; use them to locate hotspots, compare drivers, and decide what to validate locally. Always separate direct observations from proxies, and validate feed completeness, service-point currency/capacity, demographic assumptions, EO proxy interpretation and walking-network conditions before action.",
+      "Use this entry for simple provenance questions such as \"where does this data come from?\" or Chinese questions asking where the data come from or how to use them. The WebGIS does not display raw live feeds directly. Source data are cleaned, validated, computed on a 100 m grid, aggregated to H3 resolution 9 for WebGIS, and then joined to dashboard/report fields. Social vulnerability/SVI uses ISTAT 2023 census-section variables joined to ISTAT Lombardia 2021 census-section geometry; MEF/Dipartimento delle Finanze 2024 IRPEF income and ACI Autoritratto 2024 motorization are contextual/proxy supplements where used. Public transport/PTAL/PTOL/PTD uses official GTFS feeds from ATM/Comune di Milano/AMAT, Agenzia TPL Area di Milano operators Airpullman, Movibus, STAR Mobility and STAV, Agenzia TPL Area di Monza e Brianza NET, Regione Lombardia/Trenord rail GTFS, plus Lombardia NAP NeTEx supplement; the main service window is weekday 08:15-09:15 and missing feeds include Autoguidovie and STIE in relevant areas. Essential services uses Regione Lombardia/open data service records for healthcare structures, pharmacies, schools, jobs/local units and official large food retail, plus OpenStreetMap/Overpass grocery shops; current processed counts are 62 healthcare structures, 826 pharmacies, 1,341 schools, 106 official large food retail points, 2,446 OSM grocery points and 134 job municipalities. Jobs are municipality-level proxies, not workplace points. EO/territorial context uses GHSL GHS-POP 2025 100 m, GHSL GHS-BUILT-S 2000/2010/2020 100 m, ESA WorldCover 2021 10 m, PCNL 2024 night-time lights, GHS-SDGSAT-1 Po Plain stationary night-time lights 2022-2023, and OpenStreetMap road network via OSMnx. Route/stop dependency evidence is derived from GTFS/NeTEx stop-route-service records and walking-network nearest-grid relationships; it explains transit dependency and validation needs but does not replace the main score formula. Boundary/grid processing uses Citta Metropolitana di Milano boundary evidence from Regione Lombardia/open administrative sources or OSM/Nominatim relation 44881. How to use: treat the layers as screening and prioritization evidence, not final intervention proof; use them to locate hotspots, compare drivers, and decide what to validate locally. Always separate direct observations from proxies, and validate feed completeness, service-point currency/capacity, demographic assumptions, EO proxy interpretation and walking-network conditions before action.",
   },
   {
     id: "citywide-analysis-summary",
@@ -202,7 +203,7 @@ const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
       "What typologies dominate the results?",
     ],
     content:
-      "The city2graph TP-IPT decision layer contains 15,547 H3 resolution 9 cells. Mean scores are Social Vulnerability Index 39.720, Public Transport Deficit 65.521, Essential Services Deficit 62.348, EO-Territorial Disadvantage Index 48.154, hotspot score 56.653, intervention priority formula score 42.882, full-map normalized intervention priority score 51.264, and data confidence score 89.284. Priority classes are distributed as Low Priority 45.46%, Medium Priority 40.12%, and High Priority 14.41%. The largest typologies are Monitor / Low Composite Need, B/C Network Mismatch, and Essential Services Desert.",
+      "The TP-IPT decision layer contains 15,547 H3 resolution 9 cells. Mean scores are Social Vulnerability Index 39.720, Public Transport Deficit 65.521, Essential Services Deficit 62.348, EO-Territorial Disadvantage Index 48.154, hotspot score 56.653, intervention priority formula score 42.882, full-map normalized intervention priority score 51.264, and data confidence score 89.284. Priority classes are distributed as Low Priority 45.46%, Medium Priority 40.12%, and High Priority 14.41%. The largest typologies are Monitor / Low Composite Need, B/C Network Mismatch, and Essential Services Desert.",
   },
   {
     id: "ptal-gtfs-netex-caveats",
@@ -303,8 +304,8 @@ const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
   },
   {
     id: "city2graph-transit-dependency",
-    title: "city2graph transit dependency evidence",
-    source: "city2graph / GTFS-NeTEx dependency layer",
+    title: "Transit route and stop dependency evidence",
+    source: "GTFS-NeTEx dependency layer",
     modes: ["intervention", "validation", "data_confidence"],
     keywords: [
       "city2graph",
@@ -323,18 +324,18 @@ const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
       "\u5173\u7cfb",
     ],
     questions: [
-      "How should city2graph evidence be used?",
-      "Does city2graph change the ABCD score?",
+      "How should route and stop dependency evidence be used?",
+      "Does transit dependency evidence change the ABCD score?",
       "What route or stop evidence matters?",
       "What are the nearest service and walking-network relationships?",
     ],
     content:
-      "city2graph GTFS/NeTEx dependency evidence explains transit dependency and intervention logic. It does not replace or recalculate the ABCD scoring formula and should not be treated as a separate main score component. Use it to discuss route dependency, stop dependency, redundancy, feeder access, frequency checks, and local validation around the selected H3 or hotspot. When selected-coordinate walking evidence is available, use the nearest 100 m grid relationship to discuss closest healthcare, pharmacy, school, official food retail, OSM grocery, service walking distance, PTAL walking distance, detour ratios, and B/C service-PTAL mismatch.",
+      "GTFS/NeTEx route and stop dependency evidence explains transit dependency and intervention logic. It does not replace or recalculate the ABCD scoring formula and should not be treated as a separate main score component. Use it to discuss route dependency, stop dependency, redundancy, feeder access, frequency checks, and local validation around the selected H3 or hotspot. When selected-coordinate walking evidence is available, use the nearest 100 m grid relationship to discuss closest healthcare, pharmacy, school, official food retail, OSM grocery, service walking distance, PTAL walking distance, detour ratios, and B/C service-PTAL mismatch.",
   },
   {
     id: "city2graph-nearest-walking-access",
-    title: "city2graph nearest walking-access relationships",
-    source: "city2graph / walking_network_bc_full nearest-grid layer",
+    title: "Nearest walking-access relationships",
+    source: "walking_network_bc_full nearest-grid layer",
     modes: ["overview", "intervention", "validation", "data_confidence"],
     keywords: [
       "nearest",
@@ -495,7 +496,7 @@ const RESPONSE_GUIDES: Record<AnalysisResponseMode, AnalysisResponseGuide> = {
       "dominant drivers",
       "priority class",
       "score breakdown",
-      "city2graph dependency or nearest access when available",
+      "route/stop dependency or nearest access when available",
     ],
     tablePreference: "Use a markdown intervention table.",
     styleRules: [
@@ -585,6 +586,28 @@ const RESPONSE_GUIDES: Record<AnalysisResponseMode, AnalysisResponseGuide> = {
       "Avoid generic uncertainty language.",
     ],
   },
+  data_source: {
+    mode: "data_source",
+    objective: "Explain where the project data come from and how planners should use them.",
+    structure: [
+      "Start with one sentence naming the source families.",
+      "Use a source-family table with source family, main inputs, processing/use, and main caveat.",
+      "Separate direct observations from proxy variables.",
+      "End with how planners should use the layers for screening and local validation.",
+    ],
+    requiredEvidence: [
+      "source families",
+      "processed grid/H3 workflow",
+      "main caveat for each family",
+      "proxy versus direct-observation distinction",
+    ],
+    tablePreference: "Use a markdown source-family table.",
+    styleRules: [
+      "Do not start with the data confidence score unless the user asks about confidence.",
+      "Do not expose internal engine names; say route/stop dependency evidence instead.",
+      "Keep the answer simple for provenance questions.",
+    ],
+  },
   overview: {
     mode: "overview",
     objective: "Give a compact project-grounded answer without forcing a rigid report.",
@@ -641,6 +664,10 @@ function detectResponseMode(
 ): AnalysisResponseMode {
   const normalized = question.toLowerCase();
 
+  if (answerMode === "data_confidence" && isDataSourceQuestion(normalized)) {
+    return "data_source";
+  }
+
   if (
     /\b(nearest|closest|nearby|walking access|walking network|service walking|ptal walking|detour|pharmacy|school|healthcare|grocery|food retail|mismatch)\b/.test(normalized) ||
     normalized.includes("\u6700\u8fd1") ||
@@ -678,20 +705,7 @@ function detectResponseMode(
 function detectAnswerMode(question: string): AnalysisAnswerMode {
   const normalized = question.toLowerCase();
 
-  if (
-    /\bwhere\s+(?:do|does|did)\b.{0,120}\bdata\b.{0,120}\bcome\s+from\b/.test(normalized) ||
-    /\bwhere\b.{0,120}\bdata\b.{0,120}\bfrom\b/.test(normalized) ||
-    /\bhow\s+(?:should|do|can|to)\b.{0,120}\bdata\b.{0,120}\b(?:use|used|using)\b/.test(normalized) ||
-    /\bdata\s+(?:source|sources|provenance|origin|origins|catalog)\b/.test(normalized) ||
-    normalized.includes("\u6570\u636e\u6765\u6e90") ||
-    normalized.includes("\u6570\u636e\u4ece") ||
-    normalized.includes("\u4ece\u54ea\u6765") ||
-    normalized.includes("\u4ece\u54ea\u91cc\u6765") ||
-    normalized.includes("\u6765\u6e90") ||
-    normalized.includes("\u600e\u4e48\u7528") ||
-    normalized.includes("\u5982\u4f55\u4f7f\u7528") ||
-    normalized.includes("\u7528\u6cd5")
-  ) {
+  if (isDataSourceQuestion(normalized)) {
     return "data_confidence";
   }
 
@@ -716,6 +730,23 @@ function detectAnswerMode(question: string): AnalysisAnswerMode {
   }
 
   return "overview";
+}
+
+function isDataSourceQuestion(normalizedQuestion: string) {
+  return (
+    /\bwhere\s+(?:do|does|did)\b.{0,120}\bdata\b.{0,120}\bcome\s+from\b/.test(normalizedQuestion) ||
+    /\bwhere\b.{0,120}\bdata\b.{0,120}\bfrom\b/.test(normalizedQuestion) ||
+    /\bhow\s+(?:should|do|can|to)\b.{0,120}\bdata\b.{0,120}\b(?:use|used|using)\b/.test(normalizedQuestion) ||
+    /\bdata\s+(?:source|sources|provenance|origin|origins|catalog)\b/.test(normalizedQuestion) ||
+    normalizedQuestion.includes("\u6570\u636e\u6765\u6e90") ||
+    normalizedQuestion.includes("\u6570\u636e\u4ece") ||
+    normalizedQuestion.includes("\u4ece\u54ea\u6765") ||
+    normalizedQuestion.includes("\u4ece\u54ea\u91cc\u6765") ||
+    normalizedQuestion.includes("\u6765\u6e90") ||
+    normalizedQuestion.includes("\u600e\u4e48\u7528") ||
+    normalizedQuestion.includes("\u5982\u4f55\u4f7f\u7528") ||
+    normalizedQuestion.includes("\u7528\u6cd5")
+  );
 }
 
 function rankKnowledgeEntries(query: string, answerMode: AnalysisAnswerMode) {
@@ -776,7 +807,7 @@ function buildDashboardContextEntry(context: unknown): AnalysisKnowledgeEntry | 
       ? `Diagnosis: priority class ${readString(diagnosis.priority_class)}, hotspot class ${readString(diagnosis.hotspot_class)}, typology ${readString(diagnosis.typology)}, dominant drivers ${readString(diagnosis.dominant_drivers)}, suggested intervention ${readString(diagnosis.suggested_intervention_family)}.`
       : "",
     city2graph
-      ? `city2graph: transit dependency ${readString(city2graph.transit_dependency_diagnosis)}, primary route ${readString(city2graph.primary_route_line)}, primary stop ${readString(city2graph.primary_stop_id)}, recommended GTFS action ${readString(city2graph.recommended_gtfs_action)}.`
+      ? `Transit dependency evidence: ${readString(city2graph.transit_dependency_diagnosis)}, primary route ${readString(city2graph.primary_route_line)}, primary stop ${readString(city2graph.primary_stop_id)}, recommended GTFS action ${readString(city2graph.recommended_gtfs_action)}.`
       : "",
   ].filter(Boolean);
 
@@ -797,9 +828,13 @@ function formatKnowledgeContext(entries: AnalysisKnowledgeEntry[]) {
   return entries
     .map(
       (entry) =>
-        `[${entry.id}] ${entry.title}\nSource: ${entry.source}\n${entry.content}`,
+        `[${publicContextId(entry.id)}] ${entry.title}\nSource: ${entry.source}\n${entry.content}`,
     )
     .join("\n\n");
+}
+
+function publicContextId(id: string) {
+  return id.replace(/city2graph/gi, "transit-dependency");
 }
 
 function flattenContextForSearch(value: unknown): string {

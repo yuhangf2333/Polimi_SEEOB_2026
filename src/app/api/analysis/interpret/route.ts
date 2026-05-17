@@ -50,9 +50,10 @@ const SYSTEM_PROMPT = [
   "If a question is outside the current project evidence, say what is not covered and name the evidence that would be needed.",
   "Do not invent routes, stops, municipalities, scores, budgets, timelines, datasets, or interventions.",
   "Separate score-based evidence from transit-dependency evidence.",
-  "city2graph evidence explains transit dependency and intervention logic; it does not recalculate the ABCD/IPI score.",
-  "When city2graph_relationship_context is present, use it as the authoritative source for exact route dependency, stop dependency, primary route, primary stop, ranks, wait time, walk time, frequency, and redundancy.",
+  "Route/stop dependency evidence explains transit dependency and intervention logic; it does not recalculate the ABCD/IPI score.",
+  "When transit_dependency_context is present, use it as the authoritative source for exact route dependency, stop dependency, primary route, primary stop, ranks, wait time, walk time, frequency, and redundancy.",
   "When nearest walking-access evidence is present, use it for closest healthcare, pharmacy, school, food retail, service walking distance, PTAL walking distance, detour ratios, and B/C mismatch; distinguish it from route and stop dependency.",
+  "Do not expose internal graph-engine names from JSON keys, source ids, user wording, or retrieved evidence. If the user mentions an internal engine name, answer with route/stop dependency evidence instead.",
   "The user payload includes response_template. Use it as the answer shape, required evidence checklist, and table preference, but do not print the template JSON or mechanically repeat every section.",
   "Default answer pattern: one direct finding sentence, then a markdown table when it improves comparison, then interpretation, then the next action or validation step when relevant.",
   "For nearest_relationship answers, prefer a table with Relationship, Value, and Planning meaning. For comparison answers, prefer Evidence, Signal, Implication, and Caveat.",
@@ -141,16 +142,18 @@ export async function POST(request: Request) {
             role: "user",
             content: JSON.stringify(
               {
-                question: runtimeConfig.question,
+                question: sanitizePublicText(runtimeConfig.question),
                 answer_mode: projectKnowledge.answerMode,
                 response_template: projectKnowledge.responseGuide,
                 dashboard_context: payload.context,
-                retrieved_project_knowledge: projectKnowledge.contextText,
-                city2graph_relationship_context:
-                  city2graphRelationships?.contextText ?? null,
-                city2graph_relationship_sources:
-                  city2graphRelationships?.sources ?? [],
-                structured_city2graph_relationships: city2graphRelationships
+                retrieved_project_knowledge: sanitizePublicText(projectKnowledge.contextText),
+                transit_dependency_context: city2graphRelationships
+                  ? sanitizePublicText(city2graphRelationships.contextText)
+                  : null,
+                transit_dependency_sources: city2graphRelationships?.sources.map(
+                  publicTransitDependencySource,
+                ) ?? [],
+                structured_transit_dependency_relationships: city2graphRelationships
                   ? {
                       h3_id: city2graphRelationships.h3Id,
                       summary: city2graphRelationships.summary,
@@ -160,9 +163,9 @@ export async function POST(request: Request) {
                     }
                   : null,
                 retrieved_sources: projectKnowledge.entries.map((entry) => ({
-                  id: entry.id,
-                  title: entry.title,
-                  source: entry.source,
+                  id: publicSourceId(entry.id),
+                  title: sanitizePublicText(entry.title),
+                  source: sanitizePublicText(entry.source),
                 })),
               },
               null,
@@ -215,7 +218,7 @@ export async function POST(request: Request) {
           );
         }
 
-        return new Response(answer, {
+        return new Response(sanitizePublicText(answer), {
           headers: {
             "Cache-Control": "no-cache, no-transform",
             "Content-Type": "text/plain; charset=utf-8",
@@ -246,7 +249,7 @@ export async function POST(request: Request) {
     }
 
     return Response.json({
-      answer,
+      answer: sanitizePublicText(answer),
       usage: data.usage ?? null,
       knowledge: {
         answerMode: projectKnowledge.answerMode,
@@ -281,6 +284,25 @@ function streamOpenAiText(body: ReadableStream<Uint8Array>) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let buffer = "";
+  let publicTail = "";
+
+  function enqueuePublicText(
+    controller: TransformStreamDefaultController<Uint8Array>,
+    content: string,
+  ) {
+    const combined = publicTail + content;
+    const safeLength = Math.max(0, combined.length - 32);
+    const safeContent = combined.slice(0, safeLength);
+    publicTail = combined.slice(safeLength);
+
+    if (safeContent) controller.enqueue(encoder.encode(sanitizePublicText(safeContent)));
+  }
+
+  function flushPublicText(controller: TransformStreamDefaultController<Uint8Array>) {
+    if (!publicTail) return;
+    controller.enqueue(encoder.encode(sanitizePublicText(publicTail)));
+    publicTail = "";
+  }
 
   return body.pipeThrough(
     new TransformStream<Uint8Array, Uint8Array>({
@@ -300,8 +322,9 @@ function streamOpenAiText(body: ReadableStream<Uint8Array>) {
             const parsed = JSON.parse(data) as ChatCompletionChunk;
             const choice = parsed.choices?.[0];
             const content = choice?.delta?.content;
-            if (content) controller.enqueue(encoder.encode(content));
+            if (content) enqueuePublicText(controller, content);
             if (choice?.finish_reason === "length") {
+              flushPublicText(controller);
               controller.enqueue(encoder.encode(truncationNotice()));
             }
           } catch {
@@ -314,22 +337,31 @@ function streamOpenAiText(body: ReadableStream<Uint8Array>) {
         if (tail) buffer += tail;
 
         const trimmed = buffer.trim();
-        if (!trimmed.startsWith("data:")) return;
+        if (!trimmed.startsWith("data:")) {
+          flushPublicText(controller);
+          return;
+        }
 
         const data = trimmed.slice(5).trim();
-        if (!data || data === "[DONE]") return;
+        if (!data || data === "[DONE]") {
+          flushPublicText(controller);
+          return;
+        }
 
         try {
           const parsed = JSON.parse(data) as ChatCompletionChunk;
           const choice = parsed.choices?.[0];
           const content = choice?.delta?.content;
-          if (content) controller.enqueue(encoder.encode(content));
+          if (content) enqueuePublicText(controller, content);
           if (choice?.finish_reason === "length") {
+            flushPublicText(controller);
             controller.enqueue(encoder.encode(truncationNotice()));
           }
         } catch {
           // Ignore malformed trailing chunks.
         }
+
+        flushPublicText(controller);
       },
     }),
   );
@@ -340,9 +372,48 @@ function withTruncationNotice(
   finishReason: string | null | undefined,
 ) {
   if (!answer) return "";
-  return finishReason === "length" ? `${answer}${truncationNotice()}` : answer;
+  const publicAnswer = sanitizePublicText(answer);
+  return finishReason === "length" ? `${publicAnswer}${truncationNotice()}` : publicAnswer;
 }
 
 function truncationNotice() {
   return "\n\nNote: the model stopped because it reached its token limit; ask a narrower follow-up if more detail is needed.";
+}
+
+function sanitizePublicText(text: string) {
+  return text
+    .replace(/city2graphy/gi, "transit-dependency")
+    .replace(/city2graph/gi, "route/stop dependency evidence");
+}
+
+function publicSourceId(id: string) {
+  return sanitizePublicText(id).replace(/\s+/g, "-").replace(/\//g, "-");
+}
+
+function publicTransitDependencySource(source: { id: string; source: string }) {
+  if (source.id.includes("nearest-walking-access")) {
+    return {
+      id: "transit-dependency-nearest-walking-access",
+      source: "nearest walking-access grid",
+    };
+  }
+
+  if (source.id.includes("route-dependency")) {
+    return {
+      id: "transit-dependency-route-edges",
+      source: "route dependency edges",
+    };
+  }
+
+  if (source.id.includes("stop-dependency")) {
+    return {
+      id: "transit-dependency-stop-edges",
+      source: "stop dependency edges",
+    };
+  }
+
+  return {
+    id: publicSourceId(source.id),
+    source: "transit dependency summary",
+  };
 }

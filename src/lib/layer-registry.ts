@@ -43,6 +43,7 @@ export type MilanLayer = {
   thematicRankProperty?: string;
   thematicClassProperty?: string;
   palette?: LayerPalette;
+  visibleInLayerMenu?: boolean;
 };
 
 export type PublicMilanLayer = Omit<MilanLayer, "filePath"> & {
@@ -148,6 +149,7 @@ export function getPublicLayers(): PublicMilanLayer[] {
     thematicRankProperty: layer.thematicRankProperty,
     thematicClassProperty: layer.thematicClassProperty,
     palette: layer.palette,
+    visibleInLayerMenu: layer.visibleInLayerMenu,
     sizeLabel: formatBytes(layer.sizeBytes),
     isLarge: layer.sizeBytes >= 50 * 1024 * 1024,
   }));
@@ -158,7 +160,9 @@ export function getContextLayers(): PublicMilanLayer[] {
 }
 
 export function getLayerGroups(): MilanLayerGroup[] {
-  const publicLayers = getPublicLayers();
+  const publicLayers = getPublicLayers().filter(
+    (layer) => layer.visibleInLayerMenu !== false,
+  );
 
   return Object.values(layerGroupMeta)
     .filter((group) => group.id !== "context")
@@ -230,6 +234,7 @@ function readPublicTransportLayers(): MilanLayer[] {
       style: { color: "#2563eb", opacity: 0.64 },
       thematicProperty: "PTAL_component",
       palette: "blue",
+      visibleInLayerMenu: false,
     },
     {
       id: "ptal-ptal-detailed",
@@ -240,10 +245,11 @@ function readPublicTransportLayers(): MilanLayer[] {
       style: { color: "#0ea5b7", opacity: 0.62 },
       thematicProperty: "ptal_order",
       palette: "teal",
+      visibleInLayerMenu: false,
     },
     {
       id: "ptal-ptal-100m-gtfs-netex",
-      name: "PTAL 100m GTFS/NeTEx",
+      name: "ptal",
       description: "Original 100 m GTFS/NeTEx PTAL class surface retained for fine-grained comparison with the strict H3 component.",
       kind: "polygon",
       fileName: "ptal_4_8_h3_100m_gtfs_netex_web.geojson",
@@ -260,6 +266,7 @@ function readPublicTransportLayers(): MilanLayer[] {
       style: { color: "#2563eb", opacity: 0.64 },
       thematicProperty: "PTOL_component",
       palette: "blue",
+      visibleInLayerMenu: false,
     },
     {
       id: "ptal-ptol-detailed",
@@ -270,10 +277,11 @@ function readPublicTransportLayers(): MilanLayer[] {
       style: { color: "#1d4ed8", opacity: 0.62 },
       thematicProperty: "ptol",
       palette: "blue",
+      visibleInLayerMenu: false,
     },
     {
       id: "ptal-ptol-100m-gtfs-netex",
-      name: "PTOL 100m GTFS/NeTEx",
+      name: "ptol",
       description: "Original 100 m GTFS/NeTEx PTOL opportunity surface retained for fine-grained modal opportunity inspection.",
       kind: "polygon",
       fileName: "ptol_4_8_h3_100m_gtfs_netex_web.geojson",
@@ -290,6 +298,7 @@ function readPublicTransportLayers(): MilanLayer[] {
       style: { color: "#2563eb", opacity: 0.64 },
       thematicProperty: "PTAL_PTOL",
       palette: "blue",
+      visibleInLayerMenu: false,
     },
     {
       id: "ptal-stops-all",
