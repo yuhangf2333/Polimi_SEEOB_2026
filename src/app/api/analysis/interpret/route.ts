@@ -41,7 +41,7 @@ type ChatCompletionChunk = {
 };
 
 const LLM_REQUEST_TIMEOUT_MS = 75_000;
-const DEFAULT_LLM_MAX_TOKENS = 1800;
+const DEFAULT_LLM_MAX_TOKENS = 2600;
 
 const SYSTEM_PROMPT = [
   "You are an evidence-grounded spatial planning assistant for the Milan TP-IPT platform.",
@@ -60,7 +60,7 @@ const SYSTEM_PROMPT = [
   "Keep answers compact, but include enough reasoning to be useful.",
   "When comparing scores, evidence, caveats, interventions, or validation tasks, prefer a markdown table.",
   "Do not wrap markdown tables in code fences.",
-  "For formulas, use markdown math delimiters such as $PTD = 1 - PTA$ or $$EOTD = M(0.45 SI + 0.25 DS + 0.20 GP + 0.10 DI)$$.",
+  "For formulas, use display math blocks with $$ on their own lines, for example $$\nPTD = 1 - PTA\n$$. Do not put formulas in inline code or a markdown table cell.",
   "Complete the answer within the response. If evidence is missing, say what is missing instead of stopping mid-answer.",
   "When the user asks what to do next, include a concrete intervention recommendation and one validation step.",
   "Always include data confidence or caveats when they affect interpretation.",

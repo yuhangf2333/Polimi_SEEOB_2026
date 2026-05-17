@@ -1071,24 +1071,44 @@ const ANALYSIS_PRESET_CATEGORIES = [
     label: "Data",
     questions: [
       {
-        label: "How are the scores calculated?",
+        label: "How is SVI calculated?",
         prompt:
-          "Show how the main scores are calculated. Use markdown math for formulas and explain SVI, PTD, ESD, EOTD, TPHS, intervention_priority_formula_score, intervention_priority_score, and DCS.",
+          "How is Social Vulnerability Index (SVI) calculated? Answer only this metric. Show the formula using markdown display math, name the six input components, and state the main proxy/no-data caveat.",
       },
       {
-        label: "Explain the priority formula.",
+        label: "How is PTD calculated?",
         prompt:
-          "Explain the intervention priority formula step by step. Show the raw formula score and the full-map normalized intervention_priority_score using markdown math.",
+          "How is Public Transport Deficit (PTD) calculated? Answer only this metric. Show the formula using markdown display math, define PTA, explain the 0-100 dashboard display scale, and state the GTFS/NeTEx caveat.",
       },
       {
-        label: "What data feeds each score?",
+        label: "How is ESD calculated?",
         prompt:
-          "Which datasets feed each score? Compare vulnerability, public transport, essential services, earth observation, hotspot, priority, and confidence evidence in a compact table.",
+          "How is Essential Services Deficit (ESD) calculated? Answer only this metric. Show the formula using markdown display math, define ESA, list the access components, and state the service-point caveat.",
       },
       {
-        label: "Which data caveats affect formulas?",
+        label: "How is EOTD calculated?",
         prompt:
-          "Which caveats affect the score formulas? Explain proxy variables, GTFS/NeTEx limits, service POI limits, EO limits, and what should be validated before using the scores.",
+          "How is EO-Territorial Disadvantage Index (EOTD) calculated? Answer only this metric. Show the formula using markdown display math, define M, SI, DS, GP, and DI, and state the EO proxy caveat.",
+      },
+      {
+        label: "How is TPHS calculated?",
+        prompt:
+          "How is Transport Poverty Hotspot Score (TPHS) calculated? Answer only this metric. Show the formula using markdown display math, explain the vulnerability-deficit interaction term, and state the interpretation scale.",
+      },
+      {
+        label: "How is raw priority calculated?",
+        prompt:
+          "How is intervention_priority_formula_score calculated? Answer only this raw priority metric. Show the formula using markdown display math, define TPHS_norm, VPE, ESC, FEAS, GM, and CA, and explain that it is not the normalized display score.",
+      },
+      {
+        label: "How is normalized priority calculated?",
+        prompt:
+          "How is intervention_priority_score calculated? Answer only this normalized priority metric. Show the full-map min-max normalization formula using markdown display math and explain how it differs from intervention_priority_formula_score.",
+      },
+      {
+        label: "How is DCS calculated?",
+        prompt:
+          "How is Data Confidence Score (DCS) calculated? Answer only this metric. Show the formula using markdown display math, define source completeness, spatial resolution, temporal freshness, and data directness, and explain how CA uses DCS.",
       },
     ],
   },
@@ -3719,7 +3739,13 @@ function AnalysisDashboard({
   return (
     <div className="relative h-full w-full min-w-0 max-w-full overflow-y-auto lg:overflow-hidden overflow-x-hidden bg-muted/20 p-1.5 lg:p-2">
       <div className="grid min-h-full w-full min-w-0 gap-1.5 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,2.28fr)_minmax(360px,0.72fr)] lg:grid-rows-[minmax(176px,0.29fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2.22fr)_minmax(390px,0.78fr)]">
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-2 min-h-[22rem] lg:order-none lg:col-start-1 lg:row-start-2 lg:min-h-0")}>
+        <Card
+          className={cn(
+            DASHBOARD_PANEL_CLASS,
+            panelMode === "chat" ? "order-3" : "order-2",
+            "min-h-[18rem] sm:min-h-[22rem] lg:order-none lg:col-start-1 lg:row-start-2 lg:min-h-0",
+          )}
+        >
           <CardContent className="h-full min-w-0 p-0">
             <div className="relative h-full overflow-hidden rounded-xl bg-muted">
               {priorityLayer ? (
@@ -3761,7 +3787,13 @@ function AnalysisDashboard({
           </CardContent>
         </Card>
 
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-3 min-h-[22rem] lg:order-none lg:col-start-2 lg:row-span-2 lg:min-h-0")}>
+        <Card
+          className={cn(
+            DASHBOARD_PANEL_CLASS,
+            panelMode === "chat" ? "order-1" : "order-3",
+            "min-h-[18rem] sm:min-h-[22rem] lg:order-none lg:col-start-2 lg:row-span-2 lg:min-h-0",
+          )}
+        >
           <CardContent className="flex h-full min-h-0 min-w-0 flex-col gap-3 p-0">
             {panelMode === "chat" && llmSettings.enabled ? (
               <AnalysisChatBox
@@ -3783,7 +3815,13 @@ function AnalysisDashboard({
           </CardContent>
         </Card>
 
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-1 min-h-[18rem] lg:order-none lg:col-start-1 lg:row-start-1 lg:min-h-0")}>
+        <Card
+          className={cn(
+            DASHBOARD_PANEL_CLASS,
+            panelMode === "chat" ? "order-2" : "order-1",
+            "min-h-[16rem] sm:min-h-[18rem] lg:order-none lg:col-start-1 lg:row-start-1 lg:min-h-0",
+          )}
+        >
           <CardContent className="grid h-full min-h-0 min-w-0 grid-cols-1 items-stretch gap-3 overflow-hidden p-2 sm:grid-cols-[minmax(0,0.58fr)_minmax(0,1fr)] sm:items-center lg:grid-cols-[minmax(390px,0.42fr)_minmax(0,1fr)]">
             <AnalysisPrioritySummary
               priorityScore={priorityScore}
@@ -4986,7 +5024,7 @@ function AnalysisChatBox({
     >
       <ScrollArea
         data-analysis-chat-scroll
-        className="max-h-[min(18rem,calc(100vh-24rem))] flex-none overflow-x-hidden rounded-2xl bg-muted/25"
+        className="max-h-[min(16rem,calc(100svh-22rem))] flex-none overflow-x-hidden rounded-2xl bg-muted/25"
       >
         <div className="flex min-w-0 flex-col gap-5 p-4">
           {messages.slice(-6).map((message, index) => (

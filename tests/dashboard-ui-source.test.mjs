@@ -27,8 +27,17 @@ test("analysis chat groups recommended questions by category with AI prompt temp
   assert.match(source, /prompt:\s*"Which stops and routes matter here\?/);
   assert.match(source, /id: "data"/);
   assert.match(source, /label: "Data"/);
-  assert.match(source, /label: "How are the scores calculated\?"/);
-  assert.match(source, /prompt:\s*"Show how the main scores are calculated\./);
+  assert.match(source, /label: "How is SVI calculated\?"/);
+  assert.match(source, /prompt:\s*"How is Social Vulnerability Index \(SVI\) calculated\?/);
+  assert.match(source, /label: "How is PTD calculated\?"/);
+  assert.match(source, /label: "How is ESD calculated\?"/);
+  assert.match(source, /label: "How is EOTD calculated\?"/);
+  assert.match(source, /label: "How is TPHS calculated\?"/);
+  assert.match(source, /label: "How is raw priority calculated\?"/);
+  assert.match(source, /label: "How is normalized priority calculated\?"/);
+  assert.match(source, /label: "How is DCS calculated\?"/);
+  assert.doesNotMatch(source, /label: "How are the scores calculated\?"/);
+  assert.doesNotMatch(source, /Show how the main scores are calculated/);
   assert.match(source, /grid-cols-5/);
   assert.match(source, /const \[activePresetCategoryId, setActivePresetCategoryId\]/);
   assert.match(source, /activePresetCategory\.questions\.map/);
@@ -78,7 +87,21 @@ test("analysis chat keeps long questions and markdown tables within the narrow p
   assert.match(source, /break-words/);
   assert.match(source, /data-analysis-table-rail/);
   assert.match(source, /data-analysis-chat-scroll/);
-  assert.match(source, /max-h-\[min\(18rem,calc\(100vh-24rem\)\)\]/);
+  assert.match(source, /max-h-\[min\(16rem,calc\(100svh-22rem\)\)\]/);
+});
+
+test("analysis dashboard uses shorter mobile panels so AI controls stay reachable", async () => {
+  const source = await loadDashboardSource();
+
+  assert.match(source, /min-h-\[18rem\] sm:min-h-\[22rem\] lg:order-none lg:col-start-1/);
+  assert.match(source, /min-h-\[18rem\] sm:min-h-\[22rem\] lg:order-none lg:col-start-2/);
+  assert.match(source, /min-h-\[16rem\] sm:min-h-\[18rem\] lg:order-none lg:col-start-1/);
+  assert.match(source, /panelMode === "chat" \? "order-3" : "order-2"/);
+  assert.match(source, /panelMode === "chat" \? "order-1" : "order-3"/);
+  assert.match(source, /panelMode === "chat" \? "order-2" : "order-1"/);
+  assert.match(source, /max-h-\[min\(16rem,calc\(100svh-22rem\)\)\]/);
+  assert.doesNotMatch(source, /order-2 min-h-\[22rem\] lg:order-none/);
+  assert.doesNotMatch(source, /order-3 min-h-\[22rem\] lg:order-none/);
 });
 
 test("analysis chat message area does not stretch empty content across the full panel", async () => {
@@ -90,8 +113,7 @@ test("analysis chat message area does not stretch empty content across the full 
     source,
     /data-analysis-chat-scroll[\s\S]{0,180}flex-1/,
   );
-  assert.doesNotMatch(source, /min-h-\[16rem\]/);
-  assert.match(source, /data-analysis-chat-scroll[\s\S]{0,180}max-h-\[min\(18rem,calc\(100vh-24rem\)\)\]/);
+  assert.match(source, /data-analysis-chat-scroll[\s\S]{0,180}max-h-\[min\(16rem,calc\(100svh-22rem\)\)\]/);
 });
 
 test("analysis markdown tables render in a bounded chat-width table viewport", async () => {
@@ -124,7 +146,7 @@ test("analysis chat renders formula math blocks and inline math", async () => {
   assert.match(source, /function isFormulaLabel/);
   assert.match(source, /function extractInlineFormula/);
   assert.match(source, /\\\$\[\^\$\\n\]\+\\\$/);
-  assert.match(source, /Use markdown math for formulas/);
+  assert.match(source, /using markdown display math/);
 });
 
 test("analysis tables expose an expand dialog with the full table", async () => {

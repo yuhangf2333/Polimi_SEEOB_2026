@@ -66,6 +66,35 @@ test("retrieveAnalysisKnowledge prioritizes the data formula cookbook for data q
   assert.match(result.contextText, /which variables are direct measurements and which are proxies/);
 });
 
+test("retrieveAnalysisKnowledge answers granular data formula questions one metric at a time", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const svi = await retrieveAnalysisKnowledge({
+    question: "How is SVI calculated? Show the formula.",
+    limit: 3,
+  });
+  const ptd = await retrieveAnalysisKnowledge({
+    question: "How is PTD calculated? Show only the PTD formula.",
+    limit: 3,
+  });
+  const dcs = await retrieveAnalysisKnowledge({
+    question: "How is DCS calculated? Show only the DCS formula.",
+    limit: 3,
+  });
+
+  for (const result of [svi, ptd, dcs]) {
+    assert.equal(result.answerMode, "methodology");
+    assert.equal(result.responseGuide.mode, "methodology");
+    assert.equal(result.entries[0].id, "data-formula-cookbook");
+  }
+
+  assert.match(svi.contextText, /\$\$SVI = 0\.20 Elderly/);
+  assert.match(svi.contextText, /Elderly, Labour, Education, Citizenship, Income, and LowCarAccess/);
+  assert.match(ptd.contextText, /\$\$PTD = 1 - PTA\$\$/);
+  assert.match(ptd.contextText, /\$\$PTD_\{display\} = 100\(1 - PTA\)\$\$/);
+  assert.match(dcs.contextText, /\$\$DCS = 100\(0\.35 source_completeness/);
+});
+
 test("retrieveAnalysisKnowledge routes PTAL caveat questions to project evidence", async () => {
   const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
 
