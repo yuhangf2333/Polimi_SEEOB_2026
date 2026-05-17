@@ -1076,44 +1076,24 @@ const ANALYSIS_PRESET_CATEGORIES = [
     label: "Data",
     questions: [
       {
-        label: "How is SVI calculated?",
+        label: "Where do these data come from?",
         prompt:
-          "How is Social Vulnerability Index (SVI) calculated? Answer only this metric. Show the formula using markdown display math, name the six input components, and state the main proxy/no-data caveat.",
+          "Where do the dashboard data come from? Answer simply by source family: social vulnerability, public transport, essential services, earth observation, city2graph, and boundary/grid processing. Include the main caveat for each family.",
       },
       {
-        label: "How is PTD calculated?",
+        label: "How should I use these data?",
         prompt:
-          "How is Public Transport Deficit (PTD) calculated? Answer only this metric. Show the formula using markdown display math, define PTA, explain the 0-100 dashboard display scale, and state the GTFS/NeTEx caveat.",
+          "How should these data be used in planning? Explain what they are good for, what must be locally validated, and which variables are proxies rather than direct observations.",
       },
       {
-        label: "How is ESD calculated?",
+        label: "How are the scores calculated?",
         prompt:
-          "How is Essential Services Deficit (ESD) calculated? Answer only this metric. Show the formula using markdown display math, define ESA, list the access components, and state the service-point caveat.",
+          "How are the main dashboard scores calculated? Summarize SVI, PTD, ESD, EOTD, TPHS, intervention_priority_formula_score, intervention_priority_score, and DCS using markdown display math.",
       },
       {
-        label: "How is EOTD calculated?",
+        label: "What should be validated first?",
         prompt:
-          "How is EO-Territorial Disadvantage Index (EOTD) calculated? Answer only this metric. Show the formula using markdown display math, define M, SI, DS, GP, and DI, and state the EO proxy caveat.",
-      },
-      {
-        label: "How is TPHS calculated?",
-        prompt:
-          "How is Transport Poverty Hotspot Score (TPHS) calculated? Answer only this metric. Show the formula using markdown display math, explain the vulnerability-deficit interaction term, and state the interpretation scale.",
-      },
-      {
-        label: "How is raw priority calculated?",
-        prompt:
-          "How is intervention_priority_formula_score calculated? Answer only this raw priority metric. Show the formula using markdown display math, define TPHS_norm, VPE, ESC, FEAS, GM, and CA, and explain that it is not the normalized display score.",
-      },
-      {
-        label: "How is normalized priority calculated?",
-        prompt:
-          "How is intervention_priority_score calculated? Answer only this normalized priority metric. Show the full-map min-max normalization formula using markdown display math and explain how it differs from intervention_priority_formula_score.",
-      },
-      {
-        label: "How is DCS calculated?",
-        prompt:
-          "How is Data Confidence Score (DCS) calculated? Answer only this metric. Show the formula using markdown display math, define source completeness, spatial resolution, temporal freshness, and data directness, and explain how CA uses DCS.",
+          "What data should be validated first before using these results for intervention planning? Prioritize transit feeds, service points, vulnerability inputs, EO proxies, and city2graph/walking evidence.",
       },
     ],
   },

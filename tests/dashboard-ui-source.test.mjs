@@ -27,22 +27,26 @@ test("analysis chat groups recommended questions by category with AI prompt temp
   assert.match(source, /prompt:\s*"Which stops and routes matter here\?/);
   assert.match(source, /id: "data"/);
   assert.match(source, /label: "Data"/);
-  assert.match(source, /label: "How is SVI calculated\?"/);
-  assert.match(source, /prompt:\s*"How is Social Vulnerability Index \(SVI\) calculated\?/);
-  assert.match(source, /label: "How is PTD calculated\?"/);
-  assert.match(source, /label: "How is ESD calculated\?"/);
-  assert.match(source, /label: "How is EOTD calculated\?"/);
-  assert.match(source, /label: "How is TPHS calculated\?"/);
-  assert.match(source, /label: "How is raw priority calculated\?"/);
-  assert.match(source, /label: "How is normalized priority calculated\?"/);
-  assert.match(source, /label: "How is DCS calculated\?"/);
-  assert.doesNotMatch(source, /label: "How are the scores calculated\?"/);
-  assert.doesNotMatch(source, /Show how the main scores are calculated/);
+  assert.match(source, /label: "Where do these data come from\?"/);
+  assert.match(source, /prompt:\s*"Where do the dashboard data come from\?/);
+  assert.match(source, /label: "How should I use these data\?"/);
+  assert.match(source, /label: "How are the scores calculated\?"/);
+  assert.match(source, /label: "What should be validated first\?"/);
   assert.match(source, /grid-cols-5/);
   assert.match(source, /const \[activePresetCategoryId, setActivePresetCategoryId\]/);
   assert.match(source, /activePresetCategory\.questions\.map/);
   assert.match(source, /choosePreset\(preset\)/);
   assert.doesNotMatch(source, /label: "为什么这个区域优先级高？"/);
+});
+
+test("analysis chat keeps the Data preset list as compact as the other categories", async () => {
+  const source = await loadDashboardSource();
+  const dataCategory = source.match(/id: "data"[\s\S]*?\n  },\n\] satisfies AnalysisPresetCategory\[\];/)?.[0];
+
+  assert.ok(dataCategory, "expected data preset category source");
+  assert.equal(dataCategory.match(/\n\s+prompt:/g)?.length, 4);
+  assert.doesNotMatch(dataCategory, /label: "How is SVI calculated\?"/);
+  assert.doesNotMatch(dataCategory, /label: "How is DCS calculated\?"/);
 });
 
 test("analysis model pill keeps model and provider inline without a dropdown", async () => {

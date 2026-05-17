@@ -126,6 +126,60 @@ const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
       "Use markdown display math delimiters for formulas so the WebGIS answer renderer can display them in a fixed formula viewport. Formula reference: $$SVI = 0.20 Elderly + 0.20 Labour + 0.15 Education + 0.15 Citizenship + 0.20 Income + 0.10 LowCarAccess$$. The SVI inputs are Elderly, Labour, Education, Citizenship, Income, and LowCarAccess; no-population cells are treated as no data in vulnerability displays. $$PTD = 1 - PTA$$ and the dashboard displays it on a 0-100 scale as $$PTD_{display} = 100(1 - PTA)$$. PTA is the normalized public transport accessibility signal derived from PTAL, frequency, line availability, hub access and PTAL/PTOL evidence. $$ESD = 1 - ESA$$ where ESA combines HealthAccess, SchoolAccess, JobAccess, and GroceryAccess. $$EOTD = M(0.45 SI + 0.25 DS + 0.20 GP + 0.10 DI)$$ where M is population demand, SI is settlement intensity, DS is development stress, GP is green protection deficit, and DI is network disadvantage. $$TPHS = min(100, 100(0.40 SVI + 0.30 PTD + 0.20 ESD + 0.10 EOTD)(1 + 0.20 min(SVI, PTD, ESD)))$$. $$intervention_priority_formula_score = 100(0.45 TPHS_norm + 0.20 VPE + 0.15 ESC + 0.10 FEAS + 0.10 GM)CA$$. $$intervention_priority_score = minmax(intervention_priority_formula_score)$$ across all visible H3 cells. $$DCS = 100(0.35 source_completeness + 0.20 spatial_resolution + 0.20 temporal_freshness + 0.25 data_directness)$$ and $$CA = 0.85 + 0.15 DCS/100$$. When explaining formulas, say which variables are direct measurements and which are proxies. When a user asks about one metric, answer only that metric, show one formula first, then list variables and the main caveat.",
   },
   {
+    id: "data-source-catalog",
+    title: "Data source catalog and use guide",
+    source:
+      "INDEX_ORGANIZATION_README.md; milan_metropolitan_ptal/README.md; milan_essential_services_accessibility/README.md; milan_eo_territorial_context/README.md; LAYER_CALCULATION_METHODS_CN.md",
+    modes: ["data_confidence", "methodology", "overview", "validation"],
+    keywords: [
+      "data source",
+      "data sources",
+      "source",
+      "sources",
+      "provenance",
+      "where from",
+      "where does this data come from",
+      "where do these data come from",
+      "how to use",
+      "use data",
+      "data method",
+      "data catalog",
+      "\u6570\u636e\u6765\u6e90",
+      "\u8fd9\u4e2a\u6570\u636e\u4ece\u54ea\u6765",
+      "\u6570\u636e\u4ece\u54ea\u6765",
+      "\u4ece\u54ea\u6765",
+      "\u4ece\u54ea\u91cc\u6765",
+      "\u6765\u6e90",
+      "\u600e\u4e48\u7528",
+      "\u5982\u4f55\u4f7f\u7528",
+      "\u7528\u6cd5",
+      "istat",
+      "gtfs",
+      "netex",
+      "regione lombardia",
+      "openstreetmap",
+      "osm",
+      "ghsl",
+      "worldcover",
+      "sdgsat",
+      "pcnl",
+      "mef",
+      "aci",
+    ],
+    questions: [
+      "Where do these data come from?",
+      "Where does this data come from?",
+      "What is the source of this data?",
+      "How should I use these data?",
+      "What are the data methods and caveats?",
+      "\u8fd9\u4e2a\u6570\u636e\u4ece\u54ea\u6765\uff1f",
+      "\u6570\u636e\u6765\u6e90\u662f\u4ec0\u4e48\uff1f",
+      "\u8fd9\u4e9b\u6570\u636e\u600e\u4e48\u7528\uff1f",
+    ],
+    content:
+      "Use this entry for simple provenance questions such as \"where does this data come from?\" or Chinese questions asking where the data come from or how to use them. The WebGIS does not display raw live feeds directly. Source data are cleaned, validated, computed on a 100 m grid, aggregated to H3 resolution 9 for WebGIS, and then joined to dashboard/report fields. Social vulnerability/SVI uses ISTAT 2023 census-section variables joined to ISTAT Lombardia 2021 census-section geometry; MEF/Dipartimento delle Finanze 2024 IRPEF income and ACI Autoritratto 2024 motorization are contextual/proxy supplements where used. Public transport/PTAL/PTOL/PTD uses official GTFS feeds from ATM/Comune di Milano/AMAT, Agenzia TPL Area di Milano operators Airpullman, Movibus, STAR Mobility and STAV, Agenzia TPL Area di Monza e Brianza NET, Regione Lombardia/Trenord rail GTFS, plus Lombardia NAP NeTEx supplement; the main service window is weekday 08:15-09:15 and missing feeds include Autoguidovie and STIE in relevant areas. Essential services uses Regione Lombardia/open data service records for healthcare structures, pharmacies, schools, jobs/local units and official large food retail, plus OpenStreetMap/Overpass grocery shops; current processed counts are 62 healthcare structures, 826 pharmacies, 1,341 schools, 106 official large food retail points, 2,446 OSM grocery points and 134 job municipalities. Jobs are municipality-level proxies, not workplace points. EO/territorial context uses GHSL GHS-POP 2025 100 m, GHSL GHS-BUILT-S 2000/2010/2020 100 m, ESA WorldCover 2021 10 m, PCNL 2024 night-time lights, GHS-SDGSAT-1 Po Plain stationary night-time lights 2022-2023, and OpenStreetMap road network via OSMnx. city2graph evidence is derived from GTFS/NeTEx stop-route-service records and walking-network nearest-grid relationships; it explains transit dependency and validation needs but does not replace the main score formula. Boundary/grid processing uses Citta Metropolitana di Milano boundary evidence from Regione Lombardia/open administrative sources or OSM/Nominatim relation 44881. How to use: treat the layers as screening and prioritization evidence, not final intervention proof; use them to locate hotspots, compare drivers, and decide what to validate locally. Always separate direct observations from proxies, and validate feed completeness, service-point currency/capacity, demographic assumptions, EO proxy interpretation and walking-network conditions before action.",
+  },
+  {
     id: "citywide-analysis-summary",
     title: "Citywide TP-IPT summary",
     source: "data/analysis/summary.json",
@@ -621,6 +675,19 @@ function detectResponseMode(
 
 function detectAnswerMode(question: string): AnalysisAnswerMode {
   const normalized = question.toLowerCase();
+
+  if (
+    normalized.includes("\u6570\u636e\u6765\u6e90") ||
+    normalized.includes("\u6570\u636e\u4ece") ||
+    normalized.includes("\u4ece\u54ea\u6765") ||
+    normalized.includes("\u4ece\u54ea\u91cc\u6765") ||
+    normalized.includes("\u6765\u6e90") ||
+    normalized.includes("\u600e\u4e48\u7528") ||
+    normalized.includes("\u5982\u4f55\u4f7f\u7528") ||
+    normalized.includes("\u7528\u6cd5")
+  ) {
+    return "data_confidence";
+  }
 
   if (/\b(formulas?|method|methodology|calculate|calculated|definition|what is|how is .+ score)\b/.test(normalized)) {
     return "methodology";

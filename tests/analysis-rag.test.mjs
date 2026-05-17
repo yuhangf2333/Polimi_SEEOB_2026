@@ -95,6 +95,24 @@ test("retrieveAnalysisKnowledge answers granular data formula questions one metr
   assert.match(dcs.contextText, /\$\$DCS = 100\(0\.35 source_completeness/);
 });
 
+test("retrieveAnalysisKnowledge answers simple data provenance and use questions", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question: "\u8fd9\u4e2a\u6570\u636e\u4ece\u54ea\u6765\uff1f\u600e\u4e48\u7528\uff1f",
+    limit: 4,
+  });
+
+  assert.equal(result.answerMode, "data_confidence");
+  assert.equal(result.responseGuide.mode, "data_confidence");
+  assert.equal(result.entries[0].id, "data-source-catalog");
+  assert.match(result.contextText, /ISTAT 2023/);
+  assert.match(result.contextText, /official GTFS/);
+  assert.match(result.contextText, /Regione Lombardia/);
+  assert.match(result.contextText, /GHSL GHS-POP 2025/);
+  assert.match(result.contextText, /100 m grid/);
+});
+
 test("retrieveAnalysisKnowledge routes PTAL caveat questions to project evidence", async () => {
   const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
 
