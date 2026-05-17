@@ -113,6 +113,21 @@ test("retrieveAnalysisKnowledge answers simple data provenance and use questions
   assert.match(result.contextText, /100 m grid/);
 });
 
+test("retrieveAnalysisKnowledge routes Data preset source and use prompts to provenance guidance", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question:
+      "Where do the dashboard data come from? How should these data be used in planning?",
+    limit: 4,
+  });
+
+  assert.equal(result.answerMode, "data_confidence");
+  assert.equal(result.responseGuide.mode, "data_confidence");
+  assert.equal(result.entries[0].id, "data-source-catalog");
+  assert.match(result.contextText, /treat the layers as screening and prioritization evidence/);
+});
+
 test("retrieveAnalysisKnowledge routes PTAL caveat questions to project evidence", async () => {
   const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
 

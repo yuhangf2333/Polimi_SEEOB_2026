@@ -140,8 +140,10 @@ const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
       "where from",
       "where does this data come from",
       "where do these data come from",
+      "where do the dashboard data come from",
       "how to use",
       "use data",
+      "how should these data be used",
       "data method",
       "data catalog",
       "\u6570\u636e\u6765\u6e90",
@@ -677,6 +679,10 @@ function detectAnswerMode(question: string): AnalysisAnswerMode {
   const normalized = question.toLowerCase();
 
   if (
+    /\bwhere\s+(?:do|does|did)\b.{0,120}\bdata\b.{0,120}\bcome\s+from\b/.test(normalized) ||
+    /\bwhere\b.{0,120}\bdata\b.{0,120}\bfrom\b/.test(normalized) ||
+    /\bhow\s+(?:should|do|can|to)\b.{0,120}\bdata\b.{0,120}\b(?:use|used|using)\b/.test(normalized) ||
+    /\bdata\s+(?:source|sources|provenance|origin|origins|catalog)\b/.test(normalized) ||
     normalized.includes("\u6570\u636e\u6765\u6e90") ||
     normalized.includes("\u6570\u636e\u4ece") ||
     normalized.includes("\u4ece\u54ea\u6765") ||
