@@ -8,6 +8,35 @@ const layoutSourcePath = new URL("../src/app/layout.tsx", import.meta.url);
 const dayLogoPath = new URL("../public/images/day_limen.svg", import.meta.url);
 const nightLogoPath = new URL("../public/images/night_limen.svg", import.meta.url);
 
+test("homepage feature cards use uploaded EO and priority ranking captures", async () => {
+  const homepageSource = await readFile(homepageSourcePath, "utf8");
+
+  assert.match(homepageSource, /milan-eo-territorial-context\.png/);
+  assert.match(homepageSource, /width=\{2559\}/);
+  assert.match(homepageSource, /height=\{1397\}/);
+  assert.match(homepageSource, /milan-priority-ranking\.png/);
+  assert.match(homepageSource, /width=\{2170\}/);
+  assert.match(homepageSource, /height=\{1395\}/);
+  assert.doesNotMatch(homepageSource, /fresh-eo-night-lights\.png/);
+  assert.doesNotMatch(homepageSource, /milan-priority-card/);
+  assert.doesNotMatch(homepageSource, /Priority is not severity/);
+});
+
+test("homepage assistant heading rotates between diagnosis and transport poverty intelligence copy", async () => {
+  const homepageSource = await readFile(homepageSourcePath, "utf8");
+  const homepageCss = await readFile(homepageCssPath, "utf8");
+
+  assert.match(homepageSource, /import \{ useEffect, useState \} from "react"/);
+  assert.match(homepageSource, /const assistantHeadlines = \[/);
+  assert.match(homepageSource, /Diagnose the hotspot\. Explain the drivers\. Rank the priority\./);
+  assert.match(homepageSource, /Intelligence for Transport Poverty Analysis/);
+  assert.match(homepageSource, /window\.setInterval\([\s\S]*3000[\s\S]*\)/);
+  assert.match(homepageSource, /milan-rotating-heading/);
+  assert.match(homepageCss, /\.milan-rotating-heading__text/);
+  assert.match(homepageCss, /@keyframes milanHeadlineSwap/);
+  assert.match(homepageCss, /prefers-reduced-motion:\s*reduce/);
+});
+
 test("homepage replaces visible name placeholders with the LIMEN svg logo", async () => {
   const homepageSource = await readFile(homepageSourcePath, "utf8");
   const layoutSource = await readFile(layoutSourcePath, "utf8");
@@ -36,15 +65,26 @@ test("homepage dark-surface logos use the redesigned night SVG asset", async () 
   assert.doesNotMatch(homepageCss, /filter:\s*brightness\(0\)\s*invert\(1\)/);
 });
 
-test("homepage removes the circled decorative and secondary hero controls", async () => {
+test("homepage removes decorative marks and footer launch arrow", async () => {
   const homepageSource = await readFile(homepageSourcePath, "utf8");
+  const footerStart = homepageSource.indexOf('<footer className="atlas-footer">');
+  const footerSource = homepageSource.slice(
+    footerStart,
+    homepageSource.indexOf("</footer>", footerStart),
+  );
 
+  assert.notEqual(footerStart, -1);
   assert.doesNotMatch(homepageSource, /atlas-ai-pill/);
   assert.doesNotMatch(homepageSource, /Read the logic/);
-  assert.equal(
-    (homepageSource.match(/atlas-mark atlas-mark--milan/g) ?? []).length,
-    1,
-  );
+  assert.doesNotMatch(footerSource, /atlas-mark atlas-mark--milan/);
+  assert.doesNotMatch(footerSource, /Launch viewer <span>/);
+  assert.doesNotMatch(footerSource, /TP-IPT WebGIS decision-support homepage demo/);
+  assert.doesNotMatch(footerSource, /BRIEFING LOGIC/);
+  assert.doesNotMatch(footerSource, /Scenario weighting/);
+  assert.doesNotMatch(footerSource, /Hotspot typology/);
+  assert.doesNotMatch(footerSource, /Report export/);
+  assert.doesNotMatch(footerSource, /Local validation/);
+  assert.match(footerSource, /2026 SEEOB GROUP3 PROJECT/);
 });
 
 test("homepage hero map image loads eagerly for LCP without deprecated priority behavior", async () => {

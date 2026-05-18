@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ChevronDown,
@@ -82,6 +82,11 @@ const promptExamples = [
   "Explain why this hotspot is high priority",
   "Transport or service gap: which driver matters most?",
   "Write a report paragraph with caveats and validation needs",
+];
+
+const assistantHeadlines = [
+  "Diagnose the hotspot. Explain the drivers. Rank the priority.",
+  "Intelligence for Transport Poverty Analysis",
 ];
 
 const templateCards = [
@@ -182,8 +187,17 @@ const faqs = [
 
 export function MilanHomepage() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [assistantHeadlineIndex, setAssistantHeadlineIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState(0);
   const activeTab = heroTabs[activeIndex];
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setAssistantHeadlineIndex((currentIndex) => (currentIndex + 1) % assistantHeadlines.length);
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   return (
     <main className="atlas-page milan-atlas-page milan-green-page">
@@ -255,7 +269,11 @@ export function MilanHomepage() {
           <Sparkles size={16} fill="currentColor" />
           EXPLANATION AND REPORTING ASSISTANT
         </div>
-        <h2>Diagnose the hotspot. Explain the drivers. Rank the priority.</h2>
+        <h2 className="milan-rotating-heading">
+          <span className="milan-rotating-heading__text" key={assistantHeadlines[assistantHeadlineIndex]}>
+            {assistantHeadlines[assistantHeadlineIndex]}
+          </span>
+        </h2>
         <p className="atlas-section__lead">
           The AI layer should translate structured geospatial evidence into planning language.
         </p>
@@ -346,10 +364,10 @@ export function MilanHomepage() {
           <article className="atlas-feature-card">
             <div className="atlas-window milan-window-map">
               <Image
-                src={`${captureRoot}/fresh-eo-night-lights.png`}
-                alt="Earth Observation night lights layer over satellite basemap"
-                width={1185}
-                height={904}
+                src={`${captureRoot}/milan-eo-territorial-context.png`}
+                alt="Earth Observation territorial context map"
+                width={2559}
+                height={1397}
                 sizes="(max-width: 860px) 100vw, 560px"
               />
               <div className="atlas-property-chip">EO territorial context</div>
@@ -359,22 +377,14 @@ export function MilanHomepage() {
           </article>
 
           <article className="atlas-feature-card">
-            <div className="atlas-pipeline-card milan-priority-card">
-              <h4>Priority is not severity</h4>
-              <small>Decision formula</small>
-              <div className="atlas-phase">
-                <i />
-                <i />
-                <i />
-                <i />
-              </div>
-              {["Hotspot Score", "Exposed vulnerable population", "Service criticality", "Feasibility and confidence"].map((item) => (
-                <label key={item}>
-                  <span />
-                  {item}
-                </label>
-              ))}
-              <button type="button">Review priority class</button>
+            <div className="atlas-window milan-window-map">
+              <Image
+                src={`${captureRoot}/milan-priority-ranking.png`}
+                alt="Intervention priority ranking dashboard"
+                width={2170}
+                height={1395}
+                sizes="(max-width: 860px) 100vw, 560px"
+              />
             </div>
             <h3>Ranking adds planning urgency</h3>
             <p>The Intervention Priority Index adds exposed population, service criticality, feasibility, growth mismatch, and confidence adjustment.</p>
@@ -431,9 +441,7 @@ export function MilanHomepage() {
       </section>
 
       <section className="atlas-section atlas-get-started milan-roadmap" id="roadmap">
-        <h2>
-          From briefing logic to a <a href={liveMapUrl}>live WebGIS cockpit</a>.
-        </h2>
+        <h2>Build, monitor, and explore Milan</h2>
 
         <div className="atlas-learning-grid milan-roadmap-grid">
           <article className="atlas-doc-card milan-scoring-card">
@@ -515,7 +523,7 @@ export function MilanHomepage() {
           <h2>Ready to inspect the intervention cockpit?</h2>
           <p>Open the viewer, switch outputs, and review the selected-area explanation.</p>
           <a className="atlas-footer__button" href={liveMapUrl}>
-            Launch viewer <span>-&gt;</span>
+            Launch viewer
           </a>
         </section>
 
@@ -546,21 +554,13 @@ export function MilanHomepage() {
             <a href="#assistant">Prompt examples</a>
             <a href="#roadmap">Milan pilot sequence</a>
           </nav>
-          <nav aria-label="Layer notes">
-            <h3>BRIEFING LOGIC</h3>
-            <a href={liveMapUrl}>Scenario weighting</a>
-            <a href={liveMapUrl}>Hotspot typology</a>
-            <a href={liveMapUrl}>Report export</a>
-            <a href={liveMapUrl}>Local validation</a>
-          </nav>
         </div>
 
         <div className="atlas-footer__bottom">
           <a className="atlas-logo" href="#">
-            <span className="atlas-mark atlas-mark--milan" aria-hidden="true" />
             <LimenLogo className="atlas-footer-logo__image" />
           </a>
-          <p>2026 / TP-IPT WebGIS decision-support homepage demo</p>
+          <p>2026 SEEOB GROUP3 PROJECT</p>
         </div>
       </footer>
     </main>
