@@ -154,11 +154,6 @@ const faqs = [
       "It is a WebGIS decision-support cockpit for transport poverty analysis and intervention prioritization. The goal is to help public decision-makers diagnose hotspots, understand drivers, rank priorities, and prepare policy-oriented summaries.",
   },
   {
-    question: "Is this just a map viewer?",
-    answer:
-      "No. The briefing explicitly positions the product beyond a simple map viewer or a collection of unrelated indicators. The map is the interface, but the product logic is diagnosis, prioritization, typology, recommendation, and export.",
-  },
-  {
     question: "Which analytical modules power the platform?",
     answer:
       "The core modules are Social Vulnerability Index, Public Transport Deficit, Essential Services Deficit, and EO-Territorial Disadvantage Index. Accessibility layers are converted into deficit indicators so all components point in the same decision direction.",
@@ -177,11 +172,6 @@ const faqs = [
     question: "What does the AI assistant do?",
     answer:
       "AI should not replace planning judgment. It receives structured scores, breakdowns, dominant drivers, confidence labels, typology, and caveats, then produces plain-language diagnosis, preliminary suggestions, validation needs, KPIs, and report-ready text.",
-  },
-  {
-    question: "What is the business-model boundary?",
-    answer:
-      "The recommended launch model is a hybrid consulting-plus-platform service. LIMEN sells a bounded territorial diagnosis, WebGIS cockpit, priority ranking, funding-readiness evidence, validation workshop, and policy-ready report, not a generic GIS platform or full grant-writing service.",
   },
   {
     question: "How does validation fit the product?",
@@ -267,8 +257,7 @@ export function MilanHomepage() {
         </div>
         <h2>Diagnose the hotspot. Explain the drivers. Rank the priority.</h2>
         <p className="atlas-section__lead">
-          The AI layer should translate structured geospatial evidence into planning language, while transparent scores
-          and local validation remain the basis for decisions.
+          The AI layer should translate structured geospatial evidence into planning language.
         </p>
 
         <div className="atlas-prompt" aria-label="Example planning prompt">
@@ -297,9 +286,6 @@ export function MilanHomepage() {
           />
         </div>
 
-        <p className="atlas-ai-footnote">
-          The assistant is framed as explanation support, not as a black-box tool that replaces planners.
-        </p>
       </section>
 
       <section className="atlas-section atlas-product" id="method">
@@ -354,7 +340,7 @@ export function MilanHomepage() {
               <div className="atlas-property-chip">Essential service gap</div>
             </div>
             <h3>Access is not only transport supply</h3>
-            <p>The briefing frames transport poverty as a mismatch between vulnerable populations, public transport, and everyday opportunities.</p>
+            <p>Transport poverty is a mismatch between vulnerable populations, public transport, and everyday opportunities.</p>
           </article>
 
           <article className="atlas-feature-card">
