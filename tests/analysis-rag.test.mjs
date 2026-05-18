@@ -117,6 +117,28 @@ test("retrieveAnalysisKnowledge answers simple data provenance and use questions
   assert.doesNotMatch(result.responseGuide.structure.join(" "), /main confidence issue/i);
 });
 
+test("retrieveAnalysisKnowledge includes conceptual RAG questions without relying on presets", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const transportPoverty = await retrieveAnalysisKnowledge({
+    question: "What does transport poverty mean in this project?",
+    limit: 3,
+  });
+  const nearbyStop = await retrieveAnalysisKnowledge({
+    question: "If there is a stop nearby, why can PTD still be high?",
+    limit: 3,
+  });
+
+  assert.equal(transportPoverty.answerMode, "overview");
+  assert.equal(transportPoverty.entries[0].id, "conceptual-001");
+  assert.match(transportPoverty.contextText, /combined diagnostic concept/i);
+  assert.match(transportPoverty.contextText, /not one single variable/i);
+
+  assert.equal(nearbyStop.entries[0].id, "conceptual-058");
+  assert.match(nearbyStop.contextText, /nearby stop does not always mean good public transport/i);
+  assert.match(nearbyStop.contextText, /PTAL\/PTOL component together/i);
+});
+
 test("retrieveAnalysisKnowledge routes Data preset source and use prompts to provenance guidance", async () => {
   const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
 

@@ -49,6 +49,17 @@ test("analysis chat keeps the Data preset list as compact as the other categorie
   assert.doesNotMatch(dataCategory, /label: "How is DCS calculated\?"/);
 });
 
+test("analysis chat does not expose conceptual RAG-only questions as recommended questions", async () => {
+  const source = await loadDashboardSource();
+  const presetSource = source.match(/const ANALYSIS_PRESET_CATEGORIES = \[[\s\S]*?\] satisfies AnalysisPresetCategory\[\];/)?.[0];
+
+  assert.ok(presetSource, "expected analysis preset category source");
+  assert.doesNotMatch(presetSource, /What does transport poverty mean in this project\?/);
+  assert.doesNotMatch(presetSource, /What is transport poverty\?/);
+  assert.doesNotMatch(presetSource, /If there is a stop nearby, why can PTD still be high\?/);
+  assert.doesNotMatch(presetSource, /Does a nearby stop mean good public transport\?/);
+});
+
 test("analysis preset prompts use public transit dependency wording", async () => {
   const source = await loadDashboardSource();
   const presetSource = source.match(/const ANALYSIS_PRESET_CATEGORIES = \[[\s\S]*?\] satisfies AnalysisPresetCategory\[\];/)?.[0];

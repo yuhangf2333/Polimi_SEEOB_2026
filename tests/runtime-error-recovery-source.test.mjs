@@ -4,6 +4,7 @@ import test from "node:test";
 
 const layoutPath = new URL("../src/app/layout.tsx", import.meta.url);
 const dashboardErrorPath = new URL("../src/app/dashboard/error.tsx", import.meta.url);
+const dashboardViewerPath = new URL("../src/components/milan-layer-viewer.tsx", import.meta.url);
 
 test("root layout installs a stale Next asset recovery logger", async () => {
   const source = await readFile(layoutPath, "utf8");
@@ -26,4 +27,12 @@ test("dashboard error boundary records the client error before recovery", async 
   assert.match(source, /ChunkLoadError/);
   assert.match(source, /window\.location\.reload\(\)/);
   assert.match(source, /reset\(\)/);
+});
+
+test("dashboard clears stale runtime reload sentinels after a healthy mount", async () => {
+  const source = await readFile(dashboardViewerPath, "utf8");
+
+  assert.match(source, /limen:dashboard-runtime-reload/);
+  assert.match(source, /limen:dashboard-error-reload/);
+  assert.match(source, /sessionStorage\.removeItem/);
 });

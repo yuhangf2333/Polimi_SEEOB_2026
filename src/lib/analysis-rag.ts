@@ -1,3 +1,6 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 export type AnalysisAnswerMode =
   | "priority"
   | "intervention"
@@ -48,6 +51,13 @@ type RetrieveAnalysisKnowledgeInput = {
   context?: unknown;
   limit?: number;
 };
+
+const CONCEPTUAL_QA_SOURCE = path.join(
+  process.cwd(),
+  "docs",
+  "conceptual_questions_for_rag.txt",
+);
+const CONCEPTUAL_QA_SOURCE_NAME = "docs/conceptual_questions_for_rag.txt";
 
 const ANALYSIS_KNOWLEDGE_ENTRIES: AnalysisKnowledgeEntry[] = [
   {
@@ -634,10 +644,11 @@ export async function retrieveAnalysisKnowledge({
   context,
   limit = 6,
 }: RetrieveAnalysisKnowledgeInput): Promise<RetrievedAnalysisKnowledge> {
+  const knowledgeEntries = await loadAnalysisKnowledgeEntries();
   const answerMode = detectAnswerMode(question);
   const responseGuide = RESPONSE_GUIDES[detectResponseMode(question, answerMode)];
   const query = `${question} ${flattenContextForSearch(context)}`;
-  const selectedEntries = rankKnowledgeEntries(query, answerMode)
+  const selectedEntries = rankKnowledgeEntries(knowledgeEntries, query, question, answerMode)
     .slice(0, Math.max(1, limit))
     .map(({ entry }) => entry);
   const dashboardEntry = buildDashboardContextEntry(context);
@@ -656,6 +667,135 @@ export async function retrieveAnalysisKnowledge({
     })),
     contextText: formatKnowledgeContext(entries),
   };
+}
+
+let conceptualKnowledgeEntriesPromise: Promise<AnalysisKnowledgeEntry[]> | null = null;
+
+async function loadAnalysisKnowledgeEntries() {
+  const conceptualEntries = await loadConceptualKnowledgeEntries();
+
+  return conceptualEntries.length
+    ? [...ANALYSIS_KNOWLEDGE_ENTRIES, ...conceptualEntries]
+    : ANALYSIS_KNOWLEDGE_ENTRIES;
+}
+
+function loadConceptualKnowledgeEntries() {
+  conceptualKnowledgeEntriesPromise ??= readFile(CONCEPTUAL_QA_SOURCE, "utf8")
+    .then(parseConceptualKnowledgeEntries)
+    .catch(() => []);
+
+  return conceptualKnowledgeEntriesPromise;
+}
+
+function parseConceptualKnowledgeEntries(source: string): AnalysisKnowledgeEntry[] {
+  return source
+    .split(/\r?\n={10,}\r?\n/)
+    .map(parseConceptualKnowledgeBlock)
+    .filter((entry): entry is AnalysisKnowledgeEntry => Boolean(entry));
+}
+
+function parseConceptualKnowledgeBlock(block: string): AnalysisKnowledgeEntry | null {
+  const idMatch = block.match(/\bCONCEPT-(\d{3})\b/);
+  if (!idMatch) return null;
+
+  const questions = readConceptualQuestions(block);
+  const keywords = readConceptualKeywords(block);
+  const answerZh = readConceptualAnswer(block, "answer_zh", "answer_en");
+  const answerEn = readConceptualAnswer(block, "answer_en");
+  if (!questions.length || (!answerEn && !answerZh)) return null;
+
+  const id = `conceptual-${idMatch[1]}`;
+  const content = [
+    "Use this conceptual Q&A entry for broad project-definition questions.",
+    questions.length ? `Matched questions: ${questions.join(" | ")}.` : "",
+    answerEn ? `Answer: ${answerEn}` : "",
+    answerZh ? `Chinese answer: ${answerZh}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    id,
+    title: `Conceptual Q&A ${idMatch[1]}: ${questions[0]}`,
+    source: CONCEPTUAL_QA_SOURCE_NAME,
+    modes: detectConceptualModes(keywords, questions, content),
+    keywords,
+    questions,
+    content,
+  };
+}
+
+function readConceptualKeywords(block: string) {
+  const match = block.match(/^keywords:\s*(.+)$/m);
+  return match
+    ? match[1]
+        .split(",")
+        .map((keyword) => keyword.trim())
+        .filter(Boolean)
+    : [];
+}
+
+function readConceptualQuestions(block: string) {
+  const match = block.match(/^questions:\s*\r?\n([\s\S]*?)(?:\r?\nanswer_zh:|\r?\nanswer_en:)/m);
+  if (!match) return [];
+
+  return match[1]
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*-\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function readConceptualAnswer(
+  block: string,
+  label: "answer_zh" | "answer_en",
+  nextLabel?: "answer_en",
+) {
+  const pattern = nextLabel
+    ? new RegExp(`^${label}:\\s*\\r?\\n([\\s\\S]*?)\\r?\\n${nextLabel}:`, "m")
+    : new RegExp(`^${label}:\\s*\\r?\\n([\\s\\S]*)$`, "m");
+
+  return pattern.exec(block)?.[1].trim().replace(/\s+/g, " ") ?? "";
+}
+
+function detectConceptualModes(
+  keywords: string[],
+  questions: string[],
+  content: string,
+): AnalysisAnswerMode[] {
+  const searchable = normalizeSearchText(
+    [...keywords, ...questions, content].join(" "),
+  );
+  const modes = new Set<AnalysisAnswerMode>();
+
+  if (
+    /\b(priority|hotspot|driver|typology|concern|high score|score direction)\b/.test(
+      searchable,
+    )
+  ) {
+    modes.add("priority");
+  }
+
+  if (/\b(intervention|policy|action|kpi|planning|planners|decision support)\b/.test(searchable)) {
+    modes.add("intervention");
+  }
+
+  if (/\b(validate|validation|fieldwork|check|caveat|limitation|evidence grounded)\b/.test(searchable)) {
+    modes.add("validation");
+  }
+
+  if (/\b(data|source|gtfs|netex|eo|proxy|confidence|reliability|resolution limits)\b/.test(searchable)) {
+    modes.add("data_confidence");
+  }
+
+  if (
+    /\b(definition|method|formula|calculate|calculation|score|index|h3|ptal|ptol|ptd|pta|svi|esd|esa|eotd|tphs|aggregation|population mask|report b)\b/.test(
+      searchable,
+    )
+  ) {
+    modes.add("methodology");
+  }
+
+  return modes.size ? Array.from(modes) : ["overview"];
 }
 
 function detectResponseMode(
@@ -749,10 +889,16 @@ function isDataSourceQuestion(normalizedQuestion: string) {
   );
 }
 
-function rankKnowledgeEntries(query: string, answerMode: AnalysisAnswerMode) {
+function rankKnowledgeEntries(
+  entries: AnalysisKnowledgeEntry[],
+  query: string,
+  question: string,
+  answerMode: AnalysisAnswerMode,
+) {
   const queryTokens = tokenize(query);
+  const normalizedQuestion = normalizeSearchText(question);
 
-  return ANALYSIS_KNOWLEDGE_ENTRIES.map((entry) => {
+  return entries.map((entry) => {
     const searchable = [
       entry.id,
       entry.title,
@@ -770,6 +916,18 @@ function rankKnowledgeEntries(query: string, answerMode: AnalysisAnswerMode) {
 
     for (const keyword of entry.keywords) {
       if (query.toLowerCase().includes(keyword.toLowerCase())) score += 3;
+    }
+
+    for (const entryQuestion of entry.questions) {
+      const normalizedEntryQuestion = normalizeSearchText(entryQuestion);
+      if (!normalizedEntryQuestion) continue;
+      if (
+        normalizedQuestion === normalizedEntryQuestion ||
+        normalizedQuestion.includes(normalizedEntryQuestion) ||
+        normalizedEntryQuestion.includes(normalizedQuestion)
+      ) {
+        score += 30;
+      }
     }
 
     return { entry, score };
@@ -852,9 +1010,17 @@ function flattenContextForSearch(value: unknown): string {
 function tokenize(text: string) {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9_ -]/g, " ")
+    .replace(/[^a-z0-9_\u4e00-\u9fff -]/g, " ")
     .split(/\s+/)
     .filter((token) => token.length > 2);
+}
+
+function normalizeSearchText(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9_\u4e00-\u9fff]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {

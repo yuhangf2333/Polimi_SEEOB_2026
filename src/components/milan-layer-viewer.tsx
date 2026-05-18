@@ -218,6 +218,8 @@ const GOOGLE_MAPS_EMBED_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY;
 
 const LLM_SETTINGS_STORAGE_KEY = "milan-gis-llm-settings";
+const DASHBOARD_RUNTIME_RELOAD_KEY = "limen:dashboard-runtime-reload";
+const DASHBOARD_ERROR_RELOAD_KEY = "limen:dashboard-error-reload";
 const LARGE_SURFACE_TILE_BUFFER = 32;
 
 const DEFAULT_VISIBLE_LAYER_IDS: Record<PrimaryFunctionId, string[]> = {
@@ -6426,6 +6428,15 @@ export function MilanLayerViewer({
   groups,
   contextLayers = [],
 }: MilanLayerViewerProps) {
+  React.useEffect(() => {
+    try {
+      window.sessionStorage.removeItem(DASHBOARD_RUNTIME_RELOAD_KEY);
+      window.sessionStorage.removeItem(DASHBOARD_ERROR_RELOAD_KEY);
+    } catch {
+      // Best-effort recovery cleanup; dashboard rendering should not depend on storage access.
+    }
+  }, []);
+
   const layers = React.useMemo(
     () => groups.flatMap((group) => group.layers),
     [groups],

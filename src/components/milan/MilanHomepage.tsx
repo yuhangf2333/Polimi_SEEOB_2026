@@ -7,13 +7,11 @@ import {
   ChevronDown,
   Database,
   Map,
-  Menu,
   Satellite,
   Search,
   Sparkles,
   TramFront,
   UsersRound,
-  X,
 } from "@/components/icons";
 
 const productName = "LIMEN";
@@ -584,60 +582,17 @@ export function MilanHomepage() {
 }
 
 function Header() {
-  const [open, setOpen] = useState(false);
-
   return (
     <header className="atlas-nav">
       <a className="atlas-logo" href="#">
         <LimenLogo className="atlas-logo__image" />
       </a>
 
-      <nav className="atlas-nav__links" aria-label="Primary navigation">
-        <a className="atlas-nav__link" href="#product-objects">
-          Product <ChevronDown size={14} />
-        </a>
-        <a className="atlas-nav__link" href="#method">
-          Scoring <ChevronDown size={14} />
-        </a>
-        <a className="atlas-nav__link" href={liveMapUrl}>
-          Live map
-        </a>
-        <a className="atlas-nav__link" href="#assistant">
-          Briefing <ChevronDown size={14} />
-        </a>
-      </nav>
-
       <div className="atlas-nav__actions">
-        <a href="#roadmap">Roadmap</a>
-        <a href={liveMapUrl}>Open viewer</a>
         <a className="atlas-btn atlas-btn--small" href={liveMapUrl}>
           Launch
         </a>
       </div>
-
-      <button
-        aria-expanded={open}
-        aria-label="Toggle menu"
-        className="atlas-nav__menu"
-        onClick={() => setOpen(!open)}
-        type="button"
-      >
-        {open ? <X size={22} /> : <Menu size={22} />}
-      </button>
-
-      {open ? (
-        <div className="atlas-nav__mobile">
-          <a href="#product-objects" onClick={() => setOpen(false)}>
-            Product
-          </a>
-          <a href="#method" onClick={() => setOpen(false)}>
-            Scoring
-          </a>
-          <a href={liveMapUrl} onClick={() => setOpen(false)}>
-            Open viewer
-          </a>
-        </div>
-      ) : null}
     </header>
   );
 }

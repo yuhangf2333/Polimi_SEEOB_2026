@@ -1,0 +1,785 @@
+TP-IPT / LIMEN Conceptual Q&A for RAG
+Version: Report B recalculated method
+Purpose: Conceptual questions and short answers for project RAG / Ask AI.
+Style: simple, oral, evidence-grounded.
+
+============================================================
+CONCEPT-001
+keywords: transport poverty, definition, mobility disadvantage, accessibility
+questions:
+- What does transport poverty mean in this project?
+- What is transport poverty?
+- 交通贫困是什么意思？
+- 这个项目里的 transport poverty 代表什么？
+answer_zh:
+在这个项目里，transport poverty 不是只看有没有公交。它指的是居民因为公共交通不足、基本服务可达性差、社会脆弱性高，或者空间结构不利，而更难到达日常机会和服务。它是一个综合诊断概念，不是单一变量。
+answer_en:
+In this project, transport poverty is not only about whether public transport exists. It means that residents may face weak access to daily opportunities because of poor public transport, weak essential service access, social vulnerability, or territorial disadvantage. It is a combined diagnostic concept, not one single variable.
+
+============================================================
+CONCEPT-002
+keywords: concern score, score direction, high value, low value
+questions:
+- What does a high score mean?
+- Are higher values better or worse?
+- 分数越高代表什么？
+- 这些 score 的方向是什么？
+answer_zh:
+所有最终分数都统一成 concern 方向。0 表示低 concern，1 或 100 表示高 concern。所以最终图层里，分数越高，表示问题越严重，或者越需要关注。
+answer_en:
+All final scores are aligned in the concern direction. 0 means low concern, and 1 or 100 means high concern. So in the final layers, a higher value means a more serious issue or a stronger need for attention.
+
+============================================================
+CONCEPT-003
+keywords: accessibility, deficit, inverse, conversion
+questions:
+- Why do you convert accessibility into deficit?
+- What is the difference between accessibility and deficit?
+- 为什么 accessibility 要转成 deficit？
+- deficit 是怎么来的？
+answer_zh:
+Accessibility 表示可达性，值越高越好。Deficit 表示不足，值越高问题越严重。为了让所有图层方向一致，我把可达性变量转换成 deficit。基本公式是 Deficit = 1 - Accessibility。
+answer_en:
+Accessibility means how easy it is to reach something, so higher is better. Deficit means lack of access, so higher is worse. To align all final layers in the same direction, accessibility is converted into deficit. The basic formula is Deficit = 1 - Accessibility.
+
+============================================================
+CONCEPT-004
+keywords: H3, spatial unit, resolution, hexagon, WebGIS
+questions:
+- Why do you use H3?
+- What does H3 mean here?
+- 为什么用 H3？
+- H3 在这个项目里是什么？
+answer_zh:
+H3 是 WebGIS 里的统一空间单元。它把不同来源的数据统一到同一种六边形网格里。这样可以比较不同图层，也方便网页快速显示。项目最终主要使用 H3 resolution 9。
+answer_en:
+H3 is the common spatial unit used in the WebGIS. It converts different data sources into the same hexagonal grid. This makes layers comparable and efficient to display online. The final WebGIS mainly uses H3 resolution 9.
+
+============================================================
+CONCEPT-005
+keywords: H3 resolution 9, 100m, spatial support, scale
+questions:
+- Is H3 resolution 9 the same as 100 metres?
+- What is the resolution of the map?
+- H3 9 是不是 100 米？
+- 地图分辨率是多少？
+answer_zh:
+H3 resolution 9 不是严格的 100 米方格。它是六边形网格，平均面积大约 0.105 平方公里，平均边长约 200 米。项目里很多计算先在细网格或 100 m 支持上做，最后聚合到 H3 9 用于 WebGIS 展示。
+answer_en:
+H3 resolution 9 is not exactly a 100 m square grid. It is a hexagonal grid, with an average area of about 0.105 km2 and an average edge length of about 200 m. Many computations are done on fine-grid or 100 m support first, then aggregated to H3 9 for WebGIS display.
+
+============================================================
+CONCEPT-006
+keywords: WebGIS, frontend, precomputed, GeoJSON
+questions:
+- Does the website calculate the scores live?
+- What does the WebGIS do?
+- 网站是不是实时计算分数？
+- WebGIS 负责什么？
+answer_zh:
+WebGIS 主要负责显示和交互。核心分数是预先计算好的，存储在 GeoJSON 的属性字段里。前端读取这些字段，然后根据图例和颜色规则显示地图。它不会在浏览器里重新计算核心指标。
+answer_en:
+The WebGIS mainly handles display and interaction. The core scores are precomputed and stored as GeoJSON attributes. The frontend reads these fields and renders them with legends and colors. It does not recalculate the main indicators in the browser.
+
+============================================================
+CONCEPT-007
+keywords: Dashboard, selected H3, citywide mean, values
+questions:
+- What does the dashboard show?
+- Why does the dashboard value change when I click a cell?
+- Dashboard 显示的是什么？
+- 为什么点 H3 后 dashboard 数值会变？
+answer_zh:
+Dashboard 显示综合分析图层里的分数。如果没有选择 H3，它显示全区域平均值。如果点击一个 H3 cell，它显示这个 cell 自己的分数、分类、typology 和主导因素。
+answer_en:
+The dashboard shows scores from the combined analysis layer. If no H3 cell is selected, it shows citywide mean values. If a cell is selected, it shows that cell's own scores, classes, typology, and dominant drivers.
+
+============================================================
+CONCEPT-008
+keywords: Social Vulnerability Index, SVI, vulnerable population, equity
+questions:
+- What does Social Vulnerability Index mean?
+- Is SVI the same as poverty?
+- SVI 是什么意思？
+- 社会脆弱性是不是贫困？
+answer_zh:
+SVI 表示社会脆弱性。它不是单纯的贫困指标。它组合老年人口、劳动脆弱性、教育、国籍或移民相关变量、收入和低私家车可达性，用来判断哪些人群更容易受到交通和服务不足的影响。
+answer_en:
+SVI means Social Vulnerability Index. It is not simply poverty. It combines elderly population, labour vulnerability, education, citizenship or migrant-related variables, income, and low car access. It identifies groups more exposed to transport and service gaps.
+
+============================================================
+CONCEPT-009
+keywords: low car access, motorisation, income, private mobility
+questions:
+- What does low car access mean?
+- How is low car access interpreted?
+- low car access 是什么？
+- 低私家车可达性是什么意思？
+answer_zh:
+Low car access 表示居民缺少私人交通选择的可能性。它通常结合低收入和低机动化来理解。简单说，就是收入较低且不容易依赖私家车的人群，更容易受到公交和服务不足的影响。
+answer_en:
+Low car access means limited access to private mobility. It is interpreted through low income and low motorisation. In simple terms, lower-income residents with fewer private car options are more exposed to public transport and service gaps.
+
+============================================================
+CONCEPT-010
+keywords: Public Transport Deficit, PTD, PTA, public transport
+questions:
+- What does Public Transport Deficit mean?
+- What does PTD represent?
+- PTD 是什么意思？
+- Public Transport Deficit 代表什么？
+answer_zh:
+PTD 表示公共交通不足。它不是只看有没有公交站，而是综合 stop access、service frequency、line availability、hub access 和 PTAL/PTOL component。PTA 表示公共交通可达性，PTD = 1 - PTA。
+answer_en:
+PTD means Public Transport Deficit. It is not only about whether a stop exists. It combines stop access, service frequency, line availability, hub access, and a PTAL/PTOL component. PTA means public transport accessibility, and PTD = 1 - PTA.
+
+============================================================
+CONCEPT-011
+keywords: Stop access, stop proximity, public transport stop, SA
+questions:
+- What is stop access?
+- What does SA mean?
+- Stop access 是什么？
+- SA 代表什么？
+answer_zh:
+Stop access 表示居民是否容易到达普通公共交通站点。它主要反映基础覆盖，也就是附近有没有可步行到达的公交、tram、metro 或 rail stop。它更关注 first-mile access。
+answer_en:
+Stop access measures whether residents can easily reach regular public transport stops. It captures basic coverage, meaning whether there are walkable bus, tram, metro, or rail stops nearby. It focuses on first-mile access.
+
+============================================================
+CONCEPT-012
+keywords: Hub access, interchange, connectivity, HA
+questions:
+- What is hub access?
+- What does HA mean?
+- Hub access 是什么？
+- HA 和 stop access 有什么区别？
+answer_zh:
+Hub access 表示居民是否容易到达重要交通枢纽或换乘节点。它不是看任意一个普通站点，而是看能否接近更有网络价值的节点，比如 rail、metro、主要换乘站、多线路交汇点或 relevant hub。它更关注网络连接质量。
+answer_en:
+Hub access measures whether residents can reach important hubs or interchange nodes. It is not about any regular stop. It focuses on access to nodes with stronger network value, such as rail, metro, major interchanges, multi-line stops, or relevant hubs. It captures network connection quality.
+
+============================================================
+CONCEPT-013
+keywords: Stop access vs Hub access, difference, SA, HA
+questions:
+- What is the difference between stop access and hub access?
+- Why do you separate stop access and hub access?
+- Stop access 和 hub access 有什么区别？
+- 为什么 SA 和 HA 要分开？
+answer_zh:
+Stop access 看基础站点覆盖。Hub access 看重要换乘点或高连接节点。一个地方可能离普通 bus stop 很近，所以 stop access 不错；但它可能离 metro、rail 或主要换乘点很远，所以 hub access 很弱。两者分开可以解释不同类型的公共交通不足。
+answer_en:
+Stop access captures basic stop coverage. Hub access captures access to important interchange or high-connectivity nodes. A place can be close to a local bus stop and have good stop access, but still be far from metro, rail, or major interchanges and have weak hub access. Separating them helps explain different types of public transport deficit.
+
+============================================================
+CONCEPT-014
+keywords: Service frequency, FR, headway, waiting time
+questions:
+- What does service frequency mean?
+- What does FR measure?
+- service frequency 是什么？
+- FR 代表什么？
+answer_zh:
+Service frequency 表示公共交通服务有多频繁。频率越高，平均等待时间通常越短，公共交通可用性越强。它补充了 stop access，因为有站点不代表服务频率足够。
+answer_en:
+Service frequency measures how often public transport services run. Higher frequency usually means shorter waiting time and better usability. It complements stop access because having a stop nearby does not mean service is frequent.
+
+============================================================
+CONCEPT-015
+keywords: Line availability, LA, routes, modes, service diversity
+questions:
+- What does line availability mean?
+- What does LA measure?
+- line availability 是什么？
+- LA 代表什么？
+answer_zh:
+Line availability 表示一个地方可以接触到多少线路或公共交通选择。它关注服务选择的多样性。一个地方可能有站点，但只有一条低频线路，这种情况下 line availability 不强。
+answer_en:
+Line availability measures how many lines or public transport options are available to an area. It captures service diversity. A place may have a nearby stop, but if it only has one low-frequency route, line availability is still weak.
+
+============================================================
+CONCEPT-016
+keywords: PTAL, Accessibility Index, AI, EDF
+questions:
+- What is PTAL?
+- How should PTAL be understood?
+- PTAL 是什么？
+- PTAL 怎么理解？
+answer_zh:
+PTAL 是 Public Transport Accessibility Level。它基于可步行到达的公共交通服务点、步行时间、等待时间、服务频率和线路权重，计算一个 Accessibility Index，然后分级。它反映公共交通服务可达性，但不等于全天候真实出行体验。
+answer_en:
+PTAL means Public Transport Accessibility Level. It uses reachable public transport service access points, walking time, waiting time, service frequency, and route weighting to calculate an Accessibility Index and classify it. It reflects public transport accessibility, but it is not the same as real all-day travel experience.
+
+============================================================
+CONCEPT-017
+keywords: PTOL, opportunity level, modes, frequency-free
+questions:
+- What is PTOL?
+- How is PTOL different from PTAL?
+- PTOL 是什么？
+- PTOL 和 PTAL 有什么区别？
+answer_zh:
+PTOL 是 Public Transport Opportunity Level。它更像一个 frequency-free 的机会指标，主要看一个地方能步行到几种公共交通模式，比如 bus、tram、metro、rail。PTAL 更关注频率、等待和 access time；PTOL 更关注模式选择和机会数量。
+answer_en:
+PTOL means Public Transport Opportunity Level. It is more like a frequency-free opportunity score. It counts how many public transport modes are walkable, such as bus, tram, metro, and rail. PTAL focuses more on frequency, waiting time, and access time; PTOL focuses more on modal opportunity.
+
+============================================================
+CONCEPT-018
+keywords: GTFS, NeTEx, public transport data, supplement
+questions:
+- Why do you use GTFS and NeTEx?
+- How does NeTEx supplement GTFS?
+- 为什么用 GTFS 和 NeTEx？
+- NeTEx 怎么补充 GTFS？
+answer_zh:
+GTFS 是主要公共交通数据源，提供站点、线路、班次和频率。NeTEx 用来补充 GTFS 不完整的部分，尤其是区域公共交通服务。它帮助补充 stops、service access points、线路、模式覆盖和区域服务信息。
+answer_en:
+GTFS is the main public transport data source. It provides stops, routes, trips, and frequency. NeTEx supplements missing or incomplete GTFS coverage, especially for regional public transport. It helps add stops, service access points, route or line information, mode coverage, and regional service information.
+
+============================================================
+CONCEPT-019
+keywords: GTFS limitation, scheduled service, real time, reliability
+questions:
+- What are the limitations of GTFS?
+- Does GTFS show real-time service?
+- GTFS 有什么限制？
+- GTFS 能不能代表实时公交？
+answer_zh:
+GTFS 主要表示计划服务。它不能完整表示实时延误、取消班次、拥挤、车辆可靠性或突发服务变化。所以它适合做计划服务供给分析，但不能完全代表真实出行体验。
+answer_en:
+GTFS mainly represents scheduled service. It does not fully capture real-time delays, cancelled trips, crowding, reliability, or temporary disruptions. It is useful for scheduled service supply analysis, but it does not fully represent real travel experience.
+
+============================================================
+CONCEPT-020
+keywords: Essential Services Deficit, ESD, ESA, daily services
+questions:
+- What is Essential Services Deficit?
+- What does ESD mean?
+- Essential Services Deficit 是什么？
+- ESD 代表什么？
+answer_zh:
+ESD 表示基本服务不足。它衡量居民到达医疗、学校、就业机会和 grocery 等日常服务的困难程度。ESA 表示基本服务可达性，ESD = 1 - ESA。
+answer_en:
+ESD means Essential Services Deficit. It measures weak access to daily services such as healthcare, schools, employment opportunities, and grocery access. ESA means Essential Services Accessibility, and ESD = 1 - ESA.
+
+============================================================
+CONCEPT-021
+keywords: Essential service accessibility, radius, distance, proximity
+questions:
+- Is essential service accessibility just a radius check?
+- Is it only checking if a service exists nearby?
+- Essential service accessibility 是不是只看半径内有没有服务？
+- 基本服务可达性是不是 yes/no？
+answer_zh:
+不是简单的 yes/no 半径判断。它会分别计算医疗、学校、就业机会和 grocery 的可达性，主要基于距离或 proximity 的服务可达性。然后把四类服务分数归一化并加权合成 ESA。当前实现仍有局限，例如没有完整建模容量、营业时间、资格限制、拥挤或真实 transit travel time。
+answer_en:
+It is not only a simple yes/no radius check. Accessibility is computed separately for healthcare, schools, employment opportunities, and grocery access, mainly through distance or proximity-based access. The four category scores are normalised and weighted into ESA. The current implementation still has limitations: it does not fully model capacity, opening hours, eligibility, congestion, or real transit travel time.
+
+============================================================
+CONCEPT-022
+keywords: Healthcare accessibility, health, pharmacy, service points
+questions:
+- What does healthcare accessibility include?
+- Does healthcare include pharmacies?
+- healthcare accessibility 包括什么？
+- 医疗可达性包括药店吗？
+answer_zh:
+医疗可达性主要看 healthcare structures 和 pharmacies 等医疗相关服务点。它反映居民接近基本医疗资源的程度。但它不完整代表医疗容量、专科服务、预约时间或医保资格。
+answer_en:
+Healthcare accessibility mainly uses healthcare structures and pharmacies as health-related service points. It captures proximity to basic health resources. It does not fully represent capacity, specialist services, appointment waiting time, or eligibility.
+
+============================================================
+CONCEPT-023
+keywords: School accessibility, education services, catchment
+questions:
+- What does school accessibility mean?
+- Does school access include catchment areas?
+- school accessibility 是什么？
+- 学校可达性是否包含学区？
+answer_zh:
+School accessibility 表示居民到学校服务点的空间可达性。当前更偏向位置和距离证据，不完整建模学区、容量、入学资格、学校等级或实际通学路径。
+answer_en:
+School accessibility means spatial access to school service points. In the current implementation, it is mainly based on location and distance evidence. It does not fully model catchments, capacity, eligibility, school level, or actual school travel routes.
+
+============================================================
+CONCEPT-024
+keywords: Jobs accessibility, employment opportunity, proxy
+questions:
+- What does jobs accessibility mean?
+- Are job locations directly measured?
+- jobs accessibility 是什么？
+- employment opportunity 是真实工作点吗？
+answer_zh:
+就业机会可达性是一个 proxy。它不等于每一个真实工作岗位的位置。它用于表达居民接近就业机会或就业中心的可能性，适合做空间机会分析，但不能代表具体招聘岗位。
+answer_en:
+Jobs accessibility is a proxy. It is not a direct map of every real job location. It represents potential access to employment opportunities or employment centres. It is useful for spatial opportunity analysis, but it does not represent actual vacancies.
+
+============================================================
+CONCEPT-025
+keywords: Grocery accessibility, food retail, OSM, official retail
+questions:
+- What does grocery accessibility include?
+- Is grocery based on official data or OSM?
+- grocery accessibility 包括什么？
+- grocery 数据来自哪里？
+answer_zh:
+Grocery accessibility 包括食品零售相关服务。它可以结合官方 food retail 数据和 OSM grocery 点。官方数据更稳定，OSM 可以补充小型商店，但 OSM 的完整性取决于志愿制地图覆盖。
+answer_en:
+Grocery accessibility includes food retail services. It can combine official food retail data and OSM grocery points. Official data is more stable, while OSM can supplement smaller shops. But OSM completeness depends on volunteered mapping coverage.
+
+============================================================
+CONCEPT-026
+keywords: VSEG, vulnerable service gap, SVI, ESD
+questions:
+- What is vulnerable service gap?
+- What does VSEG mean?
+- vulnerable service gap 是什么？
+- VSEG 代表什么？
+answer_zh:
+VSEG 表示 vulnerable population 和 essential service deficit 的叠加。公式是 VSEG = SVI × ESD。它不是替代 ESD，而是帮助识别社会脆弱性高且基本服务不足也高的地方。
+answer_en:
+VSEG means the overlap between vulnerable population and essential service deficit. The formula is VSEG = SVI × ESD. It does not replace ESD. It helps identify places where high social vulnerability overlaps with weak essential service access.
+
+============================================================
+CONCEPT-027
+keywords: EO-Territorial Disadvantage, EOTD, Earth Observation, territorial context
+questions:
+- What is EO-Territorial Disadvantage?
+- Does EOTD measure poverty?
+- EO-Territorial Disadvantage 是什么？
+- EOTD 是不是贫困指标？
+answer_zh:
+EOTD 是 Earth Observation 和地理空间数据形成的地域不利指数。它不是直接测贫困，而是解释空间结构是否会放大交通贫困。例如人口分布、建成区、土地覆盖、夜间活动、道路连通性和城市增长。
+answer_en:
+EOTD is a territorial disadvantage index based on Earth Observation and geospatial data. It does not directly measure poverty. It explains whether spatial structure may amplify transport poverty, such as population pattern, built-up intensity, land cover, night-time activity, road connectivity, and urban growth.
+
+============================================================
+CONCEPT-028
+keywords: Demand and Settlement Intensity, DI, demand, built-up
+questions:
+- What is Demand and Settlement Intensity?
+- What does DI mean?
+- Demand and Settlement Intensity 是什么？
+- DI 代表什么？
+answer_zh:
+DI 表示需求和聚居强度。它结合人口密度、建成区密度、人工土地覆盖和夜间灯光。它本身不一定是不利，而是说明这里可能有较高需求或较强人类活动。
+answer_en:
+DI means Demand and Settlement Intensity. It combines population density, built-up density, artificial land cover, and night-time lights. It is not automatically a disadvantage by itself. It indicates higher demand or stronger human activity.
+
+============================================================
+CONCEPT-029
+keywords: Structural Isolation, SI, road connectivity, low light
+questions:
+- What is Structural Isolation?
+- What does SI mean?
+- Structural Isolation 是什么？
+- SI 代表什么？
+answer_zh:
+SI 表示结构性隔离。它关注低道路连通性、低夜间灯光、较多绿地或开放地、较低建成强度等因素。它用于识别可能连接性弱、空间上更分散或更隔离的区域。
+answer_en:
+SI means Structural Isolation. It focuses on weak road connectivity, low night-time lights, more green or open land, and lower built-up intensity. It identifies areas that may be less connected, more dispersed, or spatially isolated.
+
+============================================================
+CONCEPT-030
+keywords: Dispersed Settlement Pressure, DS, low density, settlement
+questions:
+- What is Dispersed Settlement Pressure?
+- What does DS mean?
+- Dispersed Settlement Pressure 是什么？
+- DS 代表什么？
+answer_zh:
+DS 表示分散聚居压力。它关注有人口存在但建成区不集中的地方。这样的地方可能服务供给效率低，也可能更依赖出行才能到达日常服务。
+answer_en:
+DS means Dispersed Settlement Pressure. It captures places where population exists but built-up settlement is relatively dispersed. These areas may be harder to serve efficiently and may require more travel to reach daily services.
+
+============================================================
+CONCEPT-031
+keywords: Growth Pressure, GP, urban growth, mismatch
+questions:
+- What is Growth Pressure?
+- What does GP mean?
+- Growth Pressure 是什么？
+- GP 代表什么？
+answer_zh:
+GP 表示城市增长压力。它关注近期或持续的城市扩张。如果一个地方增长明显，但公共交通没有跟上，就可能形成 growth-transport mismatch。
+answer_en:
+GP means Growth Pressure. It captures recent or ongoing urban expansion. If an area is growing but public transport does not keep up, it may create a growth-transport mismatch.
+
+============================================================
+CONCEPT-032
+keywords: Night-time lights, NTL, activity, proxy
+questions:
+- What do night-time lights represent?
+- Are night-time lights a poverty measure?
+- 夜间灯光代表什么？
+- night-time lights 是贫困指标吗？
+answer_zh:
+夜间灯光是人类活动和活动强度的 proxy。它不是贫困指标，也不是街道照明质量。它可以帮助解释活动强度、中心性或空间活跃程度，但不能单独判断交通贫困。
+answer_en:
+Night-time lights are a proxy for human activity and activity intensity. They are not a poverty measure and not a street-lighting quality measure. They help interpret activity, centrality, or spatial intensity, but they cannot diagnose transport poverty alone.
+
+============================================================
+CONCEPT-033
+keywords: GHSL population, modelled population, census
+questions:
+- What does GHSL population represent?
+- Is GHSL the same as census?
+- GHSL population 是什么？
+- GHSL 是否等于人口普查？
+answer_zh:
+GHSL population 是模型化的格网人口数据。它适合做空间分布和暴露分析，但不等同于 census microdata 或地方登记人口。解释时需要说明它是 gridded population proxy。
+answer_en:
+GHSL population is modelled gridded population data. It is useful for spatial distribution and exposure analysis, but it is not the same as census microdata or local registry data. It should be interpreted as a gridded population proxy.
+
+============================================================
+CONCEPT-034
+keywords: ESA WorldCover, land cover, artificial land, green open land
+questions:
+- What does WorldCover provide?
+- What are artificial land cover and green open land?
+- WorldCover 提供什么？
+- artificial land-cover 和 green/open land 是什么？
+answer_zh:
+ESA WorldCover 提供土地覆盖信息。Artificial land-cover 表示人工或城市化土地。Green/open land-cover 表示绿地、开放地或低强度土地覆盖。它们帮助解释建成环境和空间结构。
+answer_en:
+ESA WorldCover provides land-cover information. Artificial land cover means built or urbanised land. Green/open land cover means green, open, or low-intensity land cover. These variables help explain the built environment and spatial structure.
+
+============================================================
+CONCEPT-035
+keywords: Road connectivity, OSM, road density, intersection density
+questions:
+- What does road connectivity mean?
+- Is road connectivity the same as walkability?
+- road connectivity 是什么？
+- 道路连通性等于步行友好吗？
+answer_zh:
+道路连通性主要来自道路网络结构，例如 road density 和 intersection density。它表示网络的连通和渗透性。但它不等于步行安全、道路质量、无障碍环境或实际步行体验。
+answer_en:
+Road connectivity mainly comes from road-network structure, such as road density and intersection density. It indicates network connectivity and permeability. It is not the same as walking safety, road quality, universal accessibility, or actual pedestrian experience.
+
+============================================================
+CONCEPT-036
+keywords: Hotspot Score, TPHS, combined score, severe
+questions:
+- What is the Hotspot Score?
+- What does TPHS mean?
+- Hotspot Score 是什么？
+- TPHS 代表什么？
+answer_zh:
+Hotspot Score 用来识别交通贫困是否结构性严重。它合并 SVI、PTD、ESD 和 EOTD，并加入一个小的 interaction multiplier，用来强调社会脆弱性、公交不足和服务不足同时出现的地方。
+answer_en:
+The Hotspot Score identifies where transport poverty is structurally severe. It combines SVI, PTD, ESD, and EOTD, with a small interaction multiplier to highlight places where social vulnerability, public transport deficit, and service deficit overlap.
+
+============================================================
+CONCEPT-037
+keywords: Interaction multiplier, overlap, co-presence, boost
+questions:
+- What is the interaction multiplier?
+- Why is there a boost in the Hotspot Score?
+- interaction multiplier 是什么？
+- 为什么 hotspot score 有 boost？
+answer_zh:
+Interaction multiplier 用来强调多种问题同时出现的地方。如果 SVI、PTD 和 ESD 同时高，说明社会脆弱性、公交不足和服务不足重叠，热点严重性更强。这个 boost 是有限的，最终分数仍会裁剪到 100。
+answer_en:
+The interaction multiplier highlights places where multiple problems appear together. If SVI, PTD, and ESD are all high, social vulnerability, public transport deficit, and service deficit overlap. The boost is limited, and the final score is clipped to 100.
+
+============================================================
+CONCEPT-038
+keywords: Intervention Priority Index, IPI, priority, planning urgency
+questions:
+- What is Intervention Priority Index?
+- Is IPI the same as Hotspot Score?
+- Intervention Priority 是什么？
+- IPI 和 Hotspot Score 一样吗？
+answer_zh:
+IPI 是干预优先级。它不是简单等于 Hotspot Score。Hotspot Score 说明问题是否严重，IPI 把严重性、脆弱人口暴露、可实施性、增长交通不匹配和数据置信度结合起来，转成规划优先级。
+answer_en:
+IPI means Intervention Priority Index. It is not the same as the Hotspot Score. The Hotspot Score diagnoses severity. IPI translates severity into planning priority by combining hotspot severity, vulnerable population exposure, feasibility, growth-transport mismatch, and data confidence.
+
+============================================================
+CONCEPT-039
+keywords: Data Confidence Score, DCS, reliability, source quality
+questions:
+- What is Data Confidence Score?
+- Does high confidence mean high priority?
+- Data Confidence 是什么？
+- 数据置信度高是不是代表优先级高？
+answer_zh:
+Data Confidence Score 表示证据可靠性，不表示问题严重程度。它衡量数据完整性、空间分辨率、时间新鲜度和数据直接性。高 confidence 说明证据更可靠；低 confidence 说明需要更多验证。
+answer_en:
+Data Confidence Score measures evidence reliability, not severity. It considers source completeness, spatial resolution, temporal freshness, and data directness. High confidence means the evidence is more reliable; low confidence means more validation is needed.
+
+============================================================
+CONCEPT-040
+keywords: Typology, classification, hotspot type, interpretation
+questions:
+- What does typology mean?
+- How should typology be used?
+- typology 是什么？
+- 热点类型有什么用？
+answer_zh:
+Typology 是解释性分类。它帮助说明一个 H3 为什么成为热点。比如它可能是 essential-services desert、active but disconnected area、dense underserved fringe 或 general transport poverty hotspot。Typology 不替代分数，它帮助解释分数背后的机制。
+answer_en:
+Typology is an interpretive classification. It explains why an H3 cell becomes a hotspot. For example, it may be an essential-services desert, active but disconnected area, dense underserved fringe, or general transport poverty hotspot. Typology does not replace the score; it explains the mechanism behind it.
+
+============================================================
+CONCEPT-041
+keywords: Essential-services desert, typology, service gap
+questions:
+- What is an essential-services desert?
+- What does this typology mean?
+- essential-services desert 是什么？
+- 服务荒漠是什么意思？
+answer_zh:
+Essential-services desert 表示基本服务不足特别明显的区域。通常它会同时有较高 ESD，并可能叠加公共交通不足和社会脆弱性。它提示干预不能只看公交，也要检查服务点、服务容量和服务可达性。
+answer_en:
+An essential-services desert is an area with a strong essential service deficit. It usually has high ESD and may also overlap with public transport deficit and social vulnerability. It suggests that intervention should not only focus on public transport, but also check service points, capacity, and service accessibility.
+
+============================================================
+CONCEPT-042
+keywords: Active but disconnected area, typology, night lights, PTD
+questions:
+- What is an active but disconnected area?
+- What does active but disconnected mean?
+- Active but disconnected area 是什么？
+- 活跃但断联区域是什么意思？
+answer_zh:
+Active but disconnected area 表示一个地方有一定活动强度，例如夜间灯光或需求信号不低，但公共交通可达性较弱。它提示可能存在活动需求和公共交通供给之间的 mismatch。
+answer_en:
+An active but disconnected area has some activity intensity, for example visible night-time lights or demand signals, but weak public transport accessibility. It suggests a mismatch between activity demand and public transport supply.
+
+============================================================
+CONCEPT-043
+keywords: Dense underserved fringe, typology, high demand, weak service
+questions:
+- What is a dense underserved fringe?
+- What does dense underserved fringe mean?
+- Dense underserved fringe 是什么？
+- 高密但服务不足边缘区是什么意思？
+answer_zh:
+Dense underserved fringe 表示需求或聚居强度较高，但公共交通或服务供给不足的边缘区域。它通常说明城市边缘或增长区域的服务没有跟上人口和建成环境变化。
+answer_en:
+Dense underserved fringe means an edge area with relatively high demand or settlement intensity but weak public transport or service supply. It often indicates that urban fringe or growth areas have not been matched by adequate services.
+
+============================================================
+CONCEPT-044
+keywords: GTFS/NeTEx dependency, city2graph, route dependency, stop dependency
+questions:
+- What is GTFS/NeTEx dependency?
+- What does city2graph add?
+- GTFS/NeTEx dependency 是什么？
+- city2graph 补充了什么？
+answer_zh:
+GTFS/NeTEx dependency 是解释公共交通依赖关系的图层。city2graph 会分析一个 H3 依赖哪些线路和站点，是否过度依赖单一低频线路，冗余度如何，以及建议检查哪类 GTFS 服务问题。它不重新计算主分数。
+answer_en:
+GTFS/NeTEx dependency is a layer for explaining public transport dependency. city2graph identifies which routes and stops an H3 cell depends on, whether it relies too much on a single low-frequency route, how redundant the service is, and what GTFS action should be checked. It does not recalculate the main score.
+
+============================================================
+CONCEPT-045
+keywords: route dependency, stop dependency, primary route, primary stop
+questions:
+- What does route dependency mean?
+- What does primary route mean?
+- route dependency 是什么？
+- primary route 和 primary stop 是什么？
+answer_zh:
+Route dependency 表示一个 H3 的公共交通可达性多大程度依赖某条线路。Primary route 是依赖占比最高的线路。Stop dependency 表示依赖某个站点的程度。Primary stop 是最关键的站点。它们用于解释网络脆弱性和干预重点。
+answer_en:
+Route dependency measures how much an H3 cell's public transport access depends on a specific route. The primary route is the route with the highest dependency share. Stop dependency measures reliance on a specific stop. The primary stop is the most important stop. These help explain network vulnerability and intervention focus.
+
+============================================================
+CONCEPT-046
+keywords: redundancy score, single route, low frequency, resilience
+questions:
+- What does redundancy score mean?
+- Why does low redundancy matter?
+- redundancy score 是什么？
+- 为什么低冗余重要？
+answer_zh:
+Redundancy score 表示公共交通选择是否有备选。如果一个区域只依赖一条低频线路，冗余度就弱。一旦这条线频率低、延误或取消，居民可达性会受到很大影响。
+answer_en:
+Redundancy score indicates whether there are alternative public transport options. If an area depends on only one low-frequency route, redundancy is weak. If that route is infrequent, delayed, or cancelled, accessibility can be strongly affected.
+
+============================================================
+CONCEPT-047
+keywords: nearest walking access, walking network, detour ratio
+questions:
+- What is nearest walking-access evidence?
+- What does detour ratio mean?
+- nearest walking access 是什么？
+- detour ratio 是什么？
+answer_zh:
+Nearest walking-access evidence 是根据点击位置匹配最近 100 m walking-network grid 后得到的本地关系。它可以说明最近医疗、药店、学校、grocery、服务步行距离、PTAL 步行距离和绕行比例。Detour ratio 表示网络步行距离相对于直线距离的绕行程度。
+answer_en:
+Nearest walking-access evidence comes from matching the clicked location to the nearest 100 m walking-network grid. It can describe nearest healthcare, pharmacy, school, grocery, service walking distance, PTAL walking distance, and detour ratios. Detour ratio shows how much longer the network walking distance is compared with straight-line distance.
+
+============================================================
+CONCEPT-048
+keywords: service-PTAL mismatch, B/C mismatch, access mismatch
+questions:
+- What is service-PTAL mismatch?
+- What does mismatch mean here?
+- service-PTAL mismatch 是什么？
+- B/C mismatch 是什么？
+answer_zh:
+Service-PTAL mismatch 表示服务可达性和公共交通可达性之间不匹配。比如一个地方可能离公共交通不算远，但基本服务很远；或者服务近，但公共交通连接弱。这个信号帮助解释问题到底来自服务位置还是交通连接。
+answer_en:
+Service-PTAL mismatch means a mismatch between service accessibility and public transport accessibility. For example, public transport may be relatively close but essential services are far away, or services may be nearby but public transport connection is weak. This signal helps explain whether the problem comes from service location or transport connection.
+
+============================================================
+CONCEPT-049
+keywords: aggregation, population weighted, area weighted, H3 to municipality
+questions:
+- How are layers aggregated?
+- Why use population weighting?
+- 图层怎么聚合？
+- 为什么用人口加权？
+answer_zh:
+不同图层用不同聚合方式。人口相关指标通常用人口加权，因为它们描述居民暴露。土地覆盖用面积比例。道路用道路长度或交叉口密度。点数据先转成距离、覆盖或可达性，再聚合到 H3。H3 到 municipality 时通常也用人口加权均值。
+answer_en:
+Different layers use different aggregation rules. Population-related indicators usually use population weighting because they describe exposed residents. Land cover uses area shares. Roads use road length or intersection density. Point data is first converted into distance, coverage, or accessibility, then aggregated to H3. H3 to municipality aggregation usually uses population-weighted mean.
+
+============================================================
+CONCEPT-050
+keywords: population mask, empty areas, rural cells, M
+questions:
+- What is the population mask?
+- Why do you use a population mask?
+- population mask 是什么？
+- 为什么需要人口掩膜？
+answer_zh:
+Population mask 用来降低无人区域被误判为高不利区域的风险。比如农田或空地可能道路少、灯光低，但如果没有居民，就不应该被当成严重交通贫困区域。人口掩膜让结果更关注有人居住的地方。
+answer_en:
+The population mask reduces the risk of marking empty areas as highly disadvantaged. For example, farmland or open land may have weak roads and low lights, but if no one lives there, it should not be treated as severe transport poverty. The mask keeps the result focused on inhabited areas.
+
+============================================================
+CONCEPT-051
+keywords: Data limitation, caveats, validation, fieldwork
+questions:
+- What are the main limitations?
+- What needs validation?
+- 主要限制是什么？
+- 哪些需要验证？
+answer_zh:
+主要限制包括：GTFS/NeTEx 是计划服务，不代表实时可靠性；服务点不完整表示容量、营业时间或资格限制；EO 是 proxy，不直接测贫困；OSM 道路可能不完整；H3 有边界效应。所以结果适合 screening 和 priority ranking，最终干预前仍需本地验证。
+answer_en:
+Main limitations include: GTFS/NeTEx are scheduled service data, not real-time reliability; service points do not fully represent capacity, opening hours, or eligibility; EO data is proxy evidence, not direct poverty measurement; OSM roads may be incomplete; H3 has boundary effects. The results are useful for screening and priority ranking, but local validation is still needed before intervention.
+
+============================================================
+CONCEPT-052
+keywords: screening, decision support, not final decision
+questions:
+- Can this tool decide interventions automatically?
+- Is the priority score the final decision?
+- 这个工具能自动决定干预吗？
+- priority score 是最终决策吗？
+answer_zh:
+不能。这个工具是 screening 和 decision support。它帮助识别哪里值得优先检查，问题可能来自哪里。最终干预还需要现场调研、交通运营验证、服务容量核查、工程可行性和地方反馈。
+answer_en:
+No. This tool is for screening and decision support. It helps identify where to check first and what the likely problem drivers are. Final intervention still needs fieldwork, transport operation validation, service capacity checks, engineering feasibility, and local feedback.
+
+============================================================
+CONCEPT-053
+keywords: Ask AI, LLM, explanation layer, not calculation
+questions:
+- What does Ask AI do?
+- Does AI recalculate the score?
+- Ask AI 是做什么的？
+- AI 会重新计算分数吗？
+answer_zh:
+Ask AI 是解释层，不是计算层。点击 H3 后，系统把该 H3 的 JSON 上下文、分数、分类、typology、主导因素、city2graph 证据和项目知识发给 LLM。LLM 不重新算分，只把已有证据转成规划语言。
+answer_en:
+Ask AI is an explanation layer, not a calculation layer. When an H3 cell is clicked, the system sends its JSON context, scores, classes, typology, dominant drivers, city2graph evidence, and project knowledge to the LLM. The LLM does not recalculate scores; it translates existing evidence into planning language.
+
+============================================================
+CONCEPT-054
+keywords: AI hallucination, evidence grounded, prompt, source
+questions:
+- How do you prevent the AI from making things up?
+- Is the AI evidence-grounded?
+- 怎么防止 AI 乱编？
+- AI 是基于证据的吗？
+answer_zh:
+系统通过多层限制减少乱编。Prompt 要求 AI 只能使用 dashboard context 和项目知识。它不能编造线路、站点、分数、预算或干预。分数是预计算的，AI 不能重算。city2graph 证据和 score evidence 也被明确分开。
+answer_en:
+The system reduces hallucination with several constraints. The prompt tells the AI to use only the dashboard context and retrieved project knowledge. It must not invent routes, stops, scores, budgets, or interventions. Scores are precomputed and must not be recalculated. city2graph evidence and score evidence are also separated.
+
+============================================================
+CONCEPT-055
+keywords: resolution limits, EO resolution, data scale
+questions:
+- What are the resolution limits of EO data?
+- Can EO data support street-level conclusions?
+- EO 数据的分辨率限制是什么？
+- EO 能不能支持街道级结论？
+answer_zh:
+EO 数据有不同原始分辨率。WorldCover 比较细，GHSL 是格网产品，夜间灯光通常更粗。它们适合解释空间结构和区域趋势，但不适合直接做街道级结论。最终我把它们 harmonise 后聚合到 H3，用于诊断和解释。
+answer_en:
+EO datasets have different native resolutions. WorldCover is relatively fine, GHSL is gridded, and night-time lights are usually coarser. They are useful for spatial structure and regional patterns, but not for direct street-level conclusions. I harmonise them and aggregate them to H3 for diagnosis and interpretation.
+
+============================================================
+CONCEPT-056
+keywords: Why Report B, recalculated, method change
+questions:
+- Was the method rebuilt from Report B?
+- What changed after Report B?
+- 方法是不是按 Report B 重做的？
+- Report B 后改变了什么？
+answer_zh:
+是的，方法和图层是按 Report B 重新整理和计算的。特别是 PTD 不再只看 PTAL，而是综合 stop access、frequency、line availability、hub access 和 PTAL/PTOL component。各模块也统一成 concern direction，并聚合到 H3 WebGIS 图层。
+answer_en:
+Yes, the method and layers were reorganised and recalculated based on Report B. In particular, PTD is no longer based only on PTAL. It combines stop access, frequency, line availability, hub access, and a PTAL/PTOL component. The modules are aligned in the concern direction and aggregated into H3 WebGIS layers.
+
+============================================================
+CONCEPT-057
+keywords: PTD dashboard, old PTD, new PTD, difference
+questions:
+- What is the difference between old PTD and new PTD?
+- Was the previous PTD only based on PTAL?
+- old PTD 和 new PTD 有什么区别？
+- 原来的 PTD 是不是只用 PTAL？
+answer_zh:
+旧 PTD 主要来自 robust-normalized PTAL AI，然后 PTD = 1 - PTA。按 Report B 重做后的 PTD 不是只用 PTAL，而是加入 stop access、service frequency、line availability、hub access 和 PTAL/PTOL component。新方法更可解释，也更符合报告 B。
+answer_en:
+The old PTD was mainly derived from robust-normalized PTAL AI, with PTD = 1 - PTA. The Report B recalculated PTD is not based only on PTAL. It includes stop access, service frequency, line availability, hub access, and a PTAL/PTOL component. The new method is more interpretable and better aligned with Report B.
+
+============================================================
+CONCEPT-058
+keywords: public transport accessibility, station nearby, frequency
+questions:
+- If there is a stop nearby, why can PTD still be high?
+- Does a nearby stop mean good public transport?
+- 附近有站为什么 PTD 还高？
+- 有站点是不是就代表公共交通好？
+answer_zh:
+附近有站点不一定代表公共交通好。可能站点频率低、线路少、缺少换乘、离 hub 远，或者只有单一低频 bus route。所以 PTD 同时看 stop access、frequency、line availability、hub access 和 PTAL/PTOL component。
+answer_en:
+A nearby stop does not always mean good public transport. The stop may have low frequency, few lines, weak interchange, poor hub access, or only one low-frequency bus route. That is why PTD considers stop access, frequency, line availability, hub access, and the PTAL/PTOL component together.
+
+============================================================
+CONCEPT-059
+keywords: interpretation, same score different reasons, decomposable
+questions:
+- Can two cells have the same score for different reasons?
+- Why keep sub-layers visible?
+- 两个 cell 分数一样，原因会不会不同？
+- 为什么要保留子图层？
+answer_zh:
+会。两个 H3 可能有同样的 Hotspot Score，但原因完全不同。一个可能是公交不足，另一个可能是服务不足，第三个可能是社会脆弱性高。所以 WebGIS 保留子图层，方便解释和选择不同干预策略。
+answer_en:
+Yes. Two H3 cells can have the same Hotspot Score for different reasons. One may be driven by public transport deficit, another by service deficit, and another by social vulnerability. The WebGIS keeps sub-layers visible so users can understand the reason and choose different intervention strategies.
+
+============================================================
+CONCEPT-060
+keywords: policy use, planning use, intervention
+questions:
+- How should planners use the results?
+- What is the practical use of the tool?
+- 规划者应该怎么用这个结果？
+- 这个工具有什么实际用途？
+answer_zh:
+规划者可以用它做初步筛查、热点识别、问题诊断和优先级排序。它可以告诉用户哪里值得先检查，问题可能来自公交、服务、社会脆弱性还是空间结构。但它不是最终工程方案，干预前还需要地方验证。
+answer_en:
+Planners can use the results for screening, hotspot detection, diagnosis, and priority ranking. The tool shows where to check first and whether the issue is more about public transport, services, social vulnerability, or territorial structure. It is not a final engineering plan, and local validation is still needed before intervention.
+
