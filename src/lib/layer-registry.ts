@@ -36,6 +36,9 @@ export type MilanLayer = {
   fileName: string;
   filePath: string;
   sizeBytes: number;
+  displayFileName?: string;
+  displayFilePath?: string;
+  displaySizeBytes?: number;
   defaultVisible?: boolean;
   style: LayerStyle;
   thematicProperty?: string;
@@ -46,7 +49,7 @@ export type MilanLayer = {
   visibleInLayerMenu?: boolean;
 };
 
-export type PublicMilanLayer = Omit<MilanLayer, "filePath"> & {
+export type PublicMilanLayer = Omit<MilanLayer, "filePath" | "displayFilePath"> & {
   sizeLabel: string;
   isLarge: boolean;
 };
@@ -142,6 +145,8 @@ export function getPublicLayers(): PublicMilanLayer[] {
     kind: layer.kind,
     fileName: layer.fileName,
     sizeBytes: layer.sizeBytes,
+    displayFileName: layer.displayFileName,
+    displaySizeBytes: layer.displaySizeBytes,
     defaultVisible: layer.defaultVisible,
     style: layer.style,
     thematicProperty: layer.thematicProperty,
@@ -788,8 +793,23 @@ function resolveLayerAsset(outputDirectory: string, fileName: string) {
 
   if (!sizePath) return null;
 
+  const displayFileName = fileName.replace(/\.geojson$/, ".display.geojson");
+  const displayFilePath = path.join(outputDirectory, displayFileName);
+  const displaySizePath = [
+    displayFilePath,
+    `${displayFilePath}.br`,
+    `${displayFilePath}.gz`,
+  ].find((candidate) => existsSync(candidate));
+
   return {
     filePath,
     sizeBytes: statSync(sizePath).size,
+    ...(displaySizePath
+      ? {
+          displayFileName,
+          displayFilePath,
+          displaySizeBytes: statSync(displaySizePath).size,
+        }
+      : {}),
   };
 }

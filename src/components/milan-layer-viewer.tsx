@@ -2433,11 +2433,12 @@ function GeoJsonLayer({
       (layer.group === "services" && layer.kind !== "point") ||
       (layer.group === "earth-observation" && layer.kind !== "point");
     const promoteId = featurePromoteId(layer);
+    const layerDataVersion = layer.displaySizeBytes ?? layer.sizeBytes;
 
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, {
         type: "geojson",
-        data: `/api/layers/${layer.id}?v=${layer.sizeBytes}`,
+        data: `/api/layers/${layer.id}?mode=display&v=${layerDataVersion}`,
         promoteId,
         buffer: isLargeSurface ? LARGE_SURFACE_TILE_BUFFER : undefined,
         tolerance: isLargeSurface ? 1.15 : undefined,

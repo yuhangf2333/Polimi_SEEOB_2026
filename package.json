@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "build:display-geojson": "node scripts/build-display-geojson.mjs",
     "build": "next build",
     "postbuild": "node scripts/prepare-standalone.mjs",
     "start": "node .next/standalone/server.js",
