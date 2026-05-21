@@ -10,19 +10,18 @@ export const SCORE_FORMULA_KEYS = [
 ];
 
 const DATA_FILES = {
-  analysis: "data/geojson/analysis/tp_ipt_analysis_h3_res9.geojson.gz",
-  vulnerability:
-    "data/geojson/vulnerability/milan_metropolitan_vulnerability_h3_res9_2023.geojson.gz",
-  services:
-    "data/geojson/services/essential_services_accessibility_h3_res9_fast.geojson.gz",
-  ptal: "data/geojson/ptal/ptal_4_8_h3_100m_gtfs_netex_fast.geojson.gz",
+  analysis: "data/geojson/analysis/h3_intervention_priority_index.geojson.gz",
+  vulnerability: "data/geojson/vulnerability/h3_social_vulnerability_index.geojson.gz",
+  services: "data/geojson/services/h3_essential_services_deficit.geojson.gz",
+  ptal: "data/geojson/ptal/h3_public_transport_deficit.geojson.gz",
+  eo: "data/geojson/earth-observation/h3_eo_territorial_disadvantage.geojson.gz",
 };
 
 const FORMULA_DATA_KEYS = {
-  svi_score: ["analysisRecords", "vulnerabilityRecords"],
+  svi_score: ["vulnerabilityRecords"],
   pt_deficit_score: ["analysisRecords", "ptalRecords"],
-  essential_services_deficit_score: ["analysisRecords", "serviceRecords"],
-  eo_territorial_disadvantage_score: ["analysisRecords"],
+  essential_services_deficit_score: ["serviceRecords"],
+  eo_territorial_disadvantage_score: ["eoRecords"],
 };
 
 const DATA_KEY_FILES = {
@@ -30,16 +29,48 @@ const DATA_KEY_FILES = {
   vulnerabilityRecords: DATA_FILES.vulnerability,
   serviceRecords: DATA_FILES.services,
   ptalRecords: DATA_FILES.ptal,
+  eoRecords: DATA_FILES.eo,
 };
 
 const FORMULA_SOURCES = [
-  "6666/final_result/webgis_data/tp_ipt_final/outputs/reports/final_scoring_methodology.md",
-  "6666/final_result/source_methods_and_metrics/Social Vulnerability Index/docs/sources/vulnerability_method_2023.md",
-  "6666/final_result/source_methods_and_metrics/Essential Services Accessibility Index/docs/methodology.md",
-  "6666/final_result/source_methods_and_metrics/milan_eo_territorial_context/docs/methodology.md",
+  "data/analysis/audit/final_scoring_methodology.md",
+  "data/analysis/audit/formula_audit_summary.json",
 ];
 
 const SOCIAL_VULNERABILITY_COMPONENTS = [
+  {
+    key: "Elderly",
+    label: "Elderly",
+    weight: 0.2,
+  },
+  {
+    key: "Labour",
+    label: "Labour",
+    weight: 0.2,
+  },
+  {
+    key: "Education",
+    label: "Education",
+    weight: 0.15,
+  },
+  {
+    key: "Citizenship",
+    label: "Citizenship",
+    weight: 0.15,
+  },
+  {
+    key: "Income",
+    label: "Income",
+    weight: 0.2,
+  },
+  {
+    key: "LowCarAccess",
+    label: "Low car access",
+    weight: 0.1,
+  },
+];
+
+const LEGACY_SOCIAL_VULNERABILITY_COMPONENTS = [
   {
     key: "children_0_14_share_pct_rank",
     label: "Children aged 0-14 rank",
@@ -69,46 +100,58 @@ const SOCIAL_VULNERABILITY_COMPONENTS = [
 const SERVICE_DEFICIT_COMPONENTS = [
   {
     deficitKey: "healthcare_deficit_score",
+    strictDeficitKey: "healthcare_deficit",
     serviceKey: "healthcare_score",
+    strictAccessKey: "HealthAccess",
     label: "Healthcare deficit",
   },
   {
     deficitKey: "school_deficit_score",
+    strictDeficitKey: "school_deficit",
     serviceKey: "school_score",
+    strictAccessKey: "SchoolAccess",
     label: "School deficit",
   },
   {
     deficitKey: "jobs_deficit_score",
+    strictDeficitKey: "jobs_deficit",
     serviceKey: "jobs_score",
+    strictAccessKey: "JobAccess",
     label: "Jobs deficit",
   },
   {
     deficitKey: "grocery_deficit_score",
+    strictDeficitKey: "grocery_deficit",
     serviceKey: "grocery_score",
+    strictAccessKey: "GroceryAccess",
     label: "Grocery deficit",
   },
 ];
 
 const EO_COMPONENTS = [
   {
-    key: "structural_isolation_score",
+    key: "SI",
+    legacyKey: "structural_isolation_score",
     label: "Structural isolation (SI)",
-    weight: 0.4,
+    weight: 0.45,
   },
   {
-    key: "dispersed_settlement_pressure_score",
+    key: "DS",
+    legacyKey: "dispersed_settlement_pressure_score",
     label: "Dispersed settlement pressure (DS)",
     weight: 0.25,
   },
   {
-    key: "growth_pressure_score",
+    key: "GP",
+    legacyKey: "growth_pressure_score",
     label: "Growth pressure (GP)",
     weight: 0.2,
   },
   {
-    key: "demand_settlement_intensity_score",
+    key: "DI",
+    legacyKey: "demand_settlement_intensity_score",
     label: "Demand and settlement intensity (DI)",
-    weight: 0.15,
+    weight: 0.1,
   },
 ];
 
@@ -131,6 +174,7 @@ export function loadScoreFormulaData(root = process.cwd(), metricKey) {
     vulnerabilityRecords: data.vulnerabilityRecords ?? [],
     serviceRecords: data.serviceRecords ?? [],
     ptalRecords: data.ptalRecords ?? [],
+    eoRecords: data.eoRecords ?? [],
   };
 }
 
@@ -145,17 +189,18 @@ export function getScoreFormulaDetails(options = {}) {
 
 function formulaDataKeys(metricKey) {
   if (metricKey) {
-    return FORMULA_DATA_KEYS[metricKey] ?? ["analysisRecords"];
+    return FORMULA_DATA_KEYS[metricKey] ?? [];
   }
 
   return Array.from(new Set(Object.values(FORMULA_DATA_KEYS).flat()));
 }
 
 export function buildScoreFormulaDetails({
-  analysisRecords,
+  analysisRecords = [],
   vulnerabilityRecords = [],
   serviceRecords = [],
   ptalRecords = [],
+  eoRecords = [],
   h3Id,
   metricKey,
 }) {
@@ -163,12 +208,20 @@ export function buildScoreFormulaDetails({
   const vulnerability = pickRecord(vulnerabilityRecords, h3Id);
   const services = pickRecord(serviceRecords, h3Id);
   const ptal = pickRecord(ptalRecords, h3Id);
-  const selectedH3Id = textValue(analysis, "h3_id") || textValue(vulnerability, "h3_id");
+  const eo = pickRecord(eoRecords, h3Id);
+  const selectedH3Id = firstTextValue(
+    [analysis, vulnerability, services, ptal, eo],
+    "h3_id",
+  );
+  const selectedMunicipality = firstTextValue(
+    [analysis, vulnerability, services, ptal, eo],
+    "municipality_name",
+  );
   const metrics = [
     buildSocialVulnerabilityMetric(analysis, vulnerability),
     buildPtalDeficitMetric(analysis, ptal),
     buildEssentialServicesMetric(analysis, services),
-    buildEoMetric(analysis),
+    buildEoMetric(analysis, eo),
   ].filter((item) => !metricKey || item.key === metricKey);
 
   return {
@@ -176,7 +229,7 @@ export function buildScoreFormulaDetails({
       type: selectedH3Id ? "h3" : "citywide",
       h3Id: selectedH3Id || null,
       label: selectedH3Id
-        ? `${textValue(analysis, "municipality_name") || "Selected H3"} / ${selectedH3Id}`
+        ? `${selectedMunicipality || "Selected H3"} / ${selectedH3Id}`
         : "Milan metropolitan citywide mean",
     },
     sources: FORMULA_SOURCES,
@@ -185,30 +238,75 @@ export function buildScoreFormulaDetails({
 }
 
 function buildSocialVulnerabilityMetric(analysis, vulnerability) {
-  const displayValue = scoreValue(analysis, "svi_score", [
-    analysis,
-    vulnerability,
-    "vulnerability_index_filled",
+  const displayValue = scoreValueAny([
+    [analysis, ["svi_score", "SVI"]],
+    [vulnerability, ["SVI", "vulnerability_index_filled"]],
   ]);
+  const hasStrictComponents = SOCIAL_VULNERABILITY_COMPONENTS.some(
+    (component) =>
+      normalizedValue(analysis, component.key) != null ||
+      normalizedValue(vulnerability, component.key) != null,
+  );
+  if (hasStrictComponents) {
+    const terms = reconcileTerms(
+      SOCIAL_VULNERABILITY_COMPONENTS.map((component) => {
+        const value =
+          normalizedValue(analysis, component.key) ??
+          normalizedValue(vulnerability, component.key) ??
+          0;
+
+        return {
+          label: component.label,
+          value: round(value * 100),
+          weight: component.weight,
+          contribution: round(value * 100 * component.weight),
+          description: "Weighted strict SVI component.",
+        };
+      }),
+      displayValue,
+    );
+
+    return {
+      key: "svi_score",
+      label: "Social Vulnerability Index",
+      value: round(displayValue),
+      formula:
+        "SVI = 0.20 * Elderly + 0.20 * Labour + 0.15 * Education + 0.15 * Citizenship + 0.20 * Income + 0.10 * LowCarAccess",
+      equation: `${formatNumber(displayValue)} = ${terms
+        .map((term) => formatNumber(term.contribution))
+        .join(" + ")}`,
+      summary:
+        "The visible score is the strict weighted social vulnerability index scaled to 0-100.",
+      terms,
+      sourceValues: [
+        sourceValue("SVI", displayValue),
+        sourceValue("Population", numberValue(analysis, "total_ghsl_population_count")),
+      ].filter(Boolean),
+      notes: [
+        "Income and motorisation are municipal-scale supplements copied to 100 m cells before SVI computation.",
+      ],
+    };
+  }
+
   const filledIndex = normalizedValue(analysis, "vulnerability_index_filled")
     ?? normalizedValue(vulnerability, "vulnerability_index_filled")
     ?? displayValue / 100;
   const sourceIndex = normalizedValue(vulnerability, "vulnerability_index")
     ?? average(
-      SOCIAL_VULNERABILITY_COMPONENTS.map((component) =>
+      LEGACY_SOCIAL_VULNERABILITY_COMPONENTS.map((component) =>
         normalizedValue(vulnerability, component.key),
       ),
     )
     ?? filledIndex;
   const fillFactor = sourceIndex > 0 ? filledIndex / sourceIndex : 0;
-  let terms = SOCIAL_VULNERABILITY_COMPONENTS.map((component) => {
+  let terms = LEGACY_SOCIAL_VULNERABILITY_COMPONENTS.map((component) => {
     const rank = normalizedValue(vulnerability, component.key);
     if (rank == null) return null;
     return {
       label: component.label,
       value: round(rank * 100),
-      weight: round(fillFactor / SOCIAL_VULNERABILITY_COMPONENTS.length, 6),
-      contribution: round(rank * 100 * fillFactor / SOCIAL_VULNERABILITY_COMPONENTS.length),
+      weight: round(fillFactor / LEGACY_SOCIAL_VULNERABILITY_COMPONENTS.length, 6),
+      contribution: round(rank * 100 * fillFactor / LEGACY_SOCIAL_VULNERABILITY_COMPONENTS.length),
       description: "Percentile rank contribution after applying the populated-cell fill factor.",
     };
   }).filter(Boolean);
@@ -228,7 +326,7 @@ function buildSocialVulnerabilityMetric(analysis, vulnerability) {
 
   return {
     key: "svi_score",
-    label: "Social vulnerability",
+    label: "Social Vulnerability Index",
     value: round(displayValue),
     formula:
       "SVI = mean of six percentile ranks; displayed score = 100 * vulnerability_index_filled",
@@ -248,11 +346,16 @@ function buildSocialVulnerabilityMetric(analysis, vulnerability) {
 }
 
 function buildPtalDeficitMetric(analysis, ptal) {
-  const displayValue = scoreValue(analysis, "pt_deficit_score", [
-    analysis,
+  const analysisDisplayValue = scoreValueNullable(analysis, [
+    "pt_deficit_score",
+    "PTD",
     "transport_access_score_mean",
   ]);
-  const pta = clamp01(1 - displayValue / 100);
+  const displayValue = analysisDisplayValue ?? scoreValueAny([[ptal, ["PTD"]]]);
+  const pta =
+    normalizedValue(analysis, "PTA") ??
+    (analysisDisplayValue == null ? normalizedValue(ptal, "PTA") : null) ??
+    clamp01(1 - displayValue / 100);
   const terms = reconcileTerms([
     {
       label: "Full deficit scale",
@@ -272,7 +375,7 @@ function buildPtalDeficitMetric(analysis, ptal) {
 
   return {
     key: "pt_deficit_score",
-    label: "PTAL deficit",
+    label: "Public Transport Deficit",
     value: round(displayValue),
     formula: "PTD = 100 * (1 - PTA)",
     equation: `${formatNumber(displayValue)} = 100 - ${formatNumber(pta * 100)}`,
@@ -281,7 +384,12 @@ function buildPtalDeficitMetric(analysis, ptal) {
     terms,
     sourceValues: [
       sourceValue("PTAL AI", numberValue(ptal, "ai")),
-      sourceValue("PTA normalized accessibility", pta),
+      sourceValue("PTA normalized accessibility", pta * 100),
+      sourceValue("Stop access (SA)", scoreInputValue(analysis, ptal, "SA")),
+      sourceValue("Frequency (FR)", scoreInputValue(analysis, ptal, "FR")),
+      sourceValue("Line availability (LA)", scoreInputValue(analysis, ptal, "LA")),
+      sourceValue("Hub access (HA)", scoreInputValue(analysis, ptal, "HA")),
+      sourceValue("PTAL/PTOL component", scoreInputValue(analysis, ptal, "PTAL_PTOL")),
       sourceValue("Accessible services", numberValue(ptal, "accessible_services")),
       sourceValue("Service access points", numberValue(ptal, "accessible_saps")),
       sourceValue("Operators", numberValue(ptal, "accessible_operators")),
@@ -293,15 +401,19 @@ function buildPtalDeficitMetric(analysis, ptal) {
 }
 
 function buildEssentialServicesMetric(analysis, services) {
-  const displayValue = scoreValue(analysis, "essential_services_deficit_score", [
-    analysis,
-    "essential_services_accessibility_score",
+  const displayValue = scoreValueAny([
+    [analysis, ["essential_services_deficit_score", "ESD"]],
+    [services, ["ESD"]],
+    [analysis, ["essential_services_accessibility_score"], "invert"],
+    [services, ["essential_services_accessibility_index"], "invert"],
   ]);
   const terms = reconcileTerms(SERVICE_DEFICIT_COMPONENTS.map((component) => {
-    const deficit = scoreValue(analysis, component.deficitKey, [
-      services,
-      component.serviceKey,
-      "invert",
+    const deficit = scoreValueAny([
+      [analysis, [component.deficitKey, component.strictDeficitKey]],
+      [services, [component.strictDeficitKey]],
+      [analysis, [component.strictAccessKey], "invert"],
+      [services, [component.strictAccessKey], "invert"],
+      [services, [component.serviceKey], "invert"],
     ]);
     return {
       label: component.label,
@@ -314,7 +426,7 @@ function buildEssentialServicesMetric(analysis, services) {
 
   return {
     key: "essential_services_deficit_score",
-    label: "Essential services deficit",
+    label: "Essential Services Deficit",
     value: round(displayValue),
     formula:
       "ESD = mean(healthcare deficit, school deficit, jobs deficit, grocery deficit)",
@@ -327,7 +439,9 @@ function buildEssentialServicesMetric(analysis, services) {
     sourceValues: [
       sourceValue(
         "Essential services accessibility index",
-        normalizedValue(analysis, "essential_services_accessibility_score")
+        normalizedValue(analysis, "ESA")
+          ?? normalizedValue(services, "ESA")
+          ?? normalizedValue(analysis, "essential_services_accessibility_score")
           ?? normalizedValue(services, "essential_services_accessibility_index"),
       ),
       sourceValue("Nearest healthcare (m)", numberValue(services, "nearest_healthcare_structure_m")),
@@ -342,24 +456,32 @@ function buildEssentialServicesMetric(analysis, services) {
   };
 }
 
-function buildEoMetric(analysis) {
-  const displayValue = scoreValue(analysis, "eo_territorial_disadvantage_score");
+function buildEoMetric(analysis, eo = {}) {
+  const displayValue = scoreValueAny([
+    [analysis, ["eo_territorial_disadvantage_score", "EOTD"]],
+    [eo, ["EOTD"]],
+  ]);
+  const populationMask =
+    normalizedValue(analysis, "M") ?? normalizedValue(eo, "M") ?? 1;
   const terms = reconcileTerms(EO_COMPONENTS.map((component) => {
-    const value = scoreValue(analysis, component.key);
+    const value = scoreValueAny([
+      [analysis, [component.key, component.legacyKey]],
+      [eo, [component.key, component.legacyKey]],
+    ]);
     return {
       label: component.label,
       value: round(value),
       weight: component.weight,
-      contribution: round(value * component.weight),
+      contribution: round(value * populationMask * component.weight),
       description: "Weighted EO territorial component.",
     };
   }), displayValue);
 
   return {
     key: "eo_territorial_disadvantage_score",
-    label: "EO territorial disadvantage",
+    label: "EO-Territorial Disadvantage Index",
     value: round(displayValue),
-    formula: "EOTD = 0.40 * SI + 0.25 * DS + 0.20 * GP + 0.15 * DI",
+    formula: "EOTD = M * (0.45 * SI + 0.25 * DS + 0.20 * GP + 0.10 * DI)",
     equation: `${formatNumber(displayValue)} = ${terms
       .map((term) => formatNumber(term.contribution))
       .join(" + ")}`,
@@ -367,10 +489,16 @@ function buildEoMetric(analysis) {
       "The visible score is the weighted EO territorial context disadvantage score.",
     terms,
     sourceValues: [
-      sourceValue("Population mask", numberValue(analysis, "population_mask")),
-      sourceValue("Night lights score", scoreValue(analysis, "night_lights_score")),
-      sourceValue("Built-up score", scoreValue(analysis, "built_up_score")),
-      sourceValue("Urban growth score", scoreValue(analysis, "urban_growth_score")),
+      sourceValue(
+        "Population mask",
+        numberValue(analysis, "M") ??
+          numberValue(eo, "M") ??
+          numberValue(analysis, "population_mask") ??
+          numberValue(eo, "population_mask"),
+      ),
+      sourceValue("Night lights score", scoreValue(analysis, "L", [eo, "L"])),
+      sourceValue("Built-up score", scoreValue(analysis, "B", [eo, "B"])),
+      sourceValue("Urban growth score", scoreValue(analysis, "U", [eo, "U"])),
     ].filter(Boolean),
     notes: [
       "The current dashboard layer stores EO sub-scores on a 0-100 scale; their weighted sum reconstructs the displayed EO disadvantage score.",
@@ -422,6 +550,15 @@ function textValue(record, key) {
   return typeof value === "string" && value.trim() ? value.trim() : "";
 }
 
+function firstTextValue(records, key) {
+  for (const record of records) {
+    const value = textValue(record, key);
+    if (value) return value;
+  }
+
+  return "";
+}
+
 function numberValue(record, key) {
   const value = Number(record?.[key]);
   return Number.isFinite(value) ? value : null;
@@ -431,6 +568,29 @@ function normalizedValue(record, key) {
   const value = numberValue(record, key);
   if (value == null) return null;
   return value > 1 ? value / 100 : value;
+}
+
+function scoreValueAny(candidates) {
+  for (const [record, keys, mode] of candidates) {
+    const score = scoreValueNullable(record, keys, mode);
+    if (score != null) return score;
+  }
+
+  return 0;
+}
+
+function scoreValueNullable(record, keys, mode) {
+  const keyList = Array.isArray(keys) ? keys : [keys];
+
+  for (const key of keyList) {
+    const value = numberValue(record, key);
+    if (value == null) continue;
+
+    const score = value <= 1 ? value * 100 : value;
+    return mode === "invert" ? 100 - score : score;
+  }
+
+  return null;
 }
 
 function scoreValue(record, key, fallback) {
@@ -461,6 +621,12 @@ function sourceValue(label, value) {
     label,
     value: round(value),
   };
+}
+
+function scoreInputValue(primaryRecord, fallbackRecord, key) {
+  const value =
+    normalizedValue(primaryRecord, key) ?? normalizedValue(fallbackRecord, key);
+  return value == null ? null : value * 100;
 }
 
 function reconcileTerms(terms, expectedTotal) {

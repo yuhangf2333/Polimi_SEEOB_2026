@@ -19,10 +19,21 @@ export async function GET(
   }
 
   try {
-    const responseAsset = await selectLayerAsset(
-      layer.filePath,
-      request.headers.get("accept-encoding") ?? "",
+    const requestUrl = new URL(request.url);
+    const prefersDisplayAsset = requestUrl.searchParams.get("mode") === "display";
+    const baseLayerPath =
+      prefersDisplayAsset && layer.displayFilePath
+        ? layer.displayFilePath
+        : layer.filePath;
+    const acceptEncoding = request.headers.get("accept-encoding") ?? "";
+    let responseAsset = await selectLayerAsset(
+      baseLayerPath,
+      acceptEncoding,
     );
+
+    if (!responseAsset && baseLayerPath !== layer.filePath) {
+      responseAsset = await selectLayerAsset(layer.filePath, acceptEncoding);
+    }
 
     if (!responseAsset) {
       return Response.json(
@@ -45,6 +56,10 @@ export async function GET(
       headers["Content-Encoding"] = encoding;
     }
 
+    if (prefersDisplayAsset && baseLayerPath !== layer.filePath) {
+      headers["X-Layer-Representation"] = "display";
+    }
+
     const stream = Readable.toWeb(createReadStream(responsePath));
 
     return new Response(stream as ReadableStream<Uint8Array>, {
@@ -63,23 +78,11 @@ async function selectLayerAsset(filePath: string, acceptEncoding: string) {
   const gzipPath = `${filePath}.gz`;
   const acceptsBrotli = acceptEncoding.includes("br");
   const acceptsGzip = acceptEncoding.includes("gzip");
-  const candidates = acceptsBrotli
-    ? [
-        { responsePath: brotliPath, encoding: "br" },
-        { responsePath: gzipPath, encoding: "gzip" },
-        { responsePath: filePath, encoding: null },
-      ]
-    : acceptsGzip
-      ? [
-          { responsePath: gzipPath, encoding: "gzip" },
-          { responsePath: brotliPath, encoding: "br" },
-          { responsePath: filePath, encoding: null },
-        ]
-      : [
-          { responsePath: filePath, encoding: null },
-          { responsePath: brotliPath, encoding: "br" },
-          { responsePath: gzipPath, encoding: "gzip" },
-        ];
+  const candidates = [
+    ...(acceptsBrotli ? [{ responsePath: brotliPath, encoding: "br" }] : []),
+    ...(acceptsGzip ? [{ responsePath: gzipPath, encoding: "gzip" }] : []),
+    { responsePath: filePath, encoding: null },
+  ];
 
   for (const candidate of candidates) {
     try {

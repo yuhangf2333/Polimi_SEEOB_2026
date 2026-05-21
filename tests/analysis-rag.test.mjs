@@ -35,6 +35,127 @@ test("retrieveAnalysisKnowledge finds project methodology for IPI questions", as
   assert.match(result.contextText, /DCS/i);
 });
 
+test("retrieveAnalysisKnowledge uses strict recalculated TP-IPT formulas", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question: "Show the strict formulas for TPHS, IPI, EOTD and DCS.",
+    limit: 4,
+  });
+
+  assert.match(result.contextText, /EOTD = M \* \(0\.45\*SI \+ 0\.25\*DS \+ 0\.20\*GP \+ 0\.10\*DI\)/);
+  assert.match(result.contextText, /1 \+ 0\.20\*min\(SVI, PTD, ESD\)/);
+  assert.match(result.contextText, /intervention_priority_formula_score \(IPI raw formula score\) = 100\*\(0\.45\*TPHS_norm \+ 0\.20\*VPE \+ 0\.15\*ESC \+ 0\.10\*FEAS \+ 0\.10\*GM\)\*CA/);
+  assert.match(result.contextText, /intervention_priority_score = full-map min-max normalize\(intervention_priority_formula_score\)/);
+  assert.match(result.contextText, /\$\$PTD_\{display\} = 100\(1 - PTA\)\$\$/);
+  assert.ok(result.responseGuide.styleRules.some((rule) => /markdown math delimiters/i.test(rule)));
+  assert.doesNotMatch(result.contextText, /0\.60\*TPHS_norm/);
+  assert.doesNotMatch(result.contextText, /1 \+ 0\.15\*min\(SVI, PTD, ESD\)/);
+});
+
+test("retrieveAnalysisKnowledge prioritizes the data formula cookbook for data questions", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question: "How are the data layers calculated and how should formulas render?",
+  });
+
+  assert.equal(result.answerMode, "methodology");
+  assert.equal(result.entries[0].id, "data-formula-cookbook");
+  assert.match(result.contextText, /\$\$SVI = 0\.20 Elderly/);
+  assert.match(result.contextText, /which variables are direct measurements and which are proxies/);
+});
+
+test("retrieveAnalysisKnowledge answers granular data formula questions one metric at a time", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const svi = await retrieveAnalysisKnowledge({
+    question: "How is SVI calculated? Show the formula.",
+    limit: 3,
+  });
+  const ptd = await retrieveAnalysisKnowledge({
+    question: "How is PTD calculated? Show only the PTD formula.",
+    limit: 3,
+  });
+  const dcs = await retrieveAnalysisKnowledge({
+    question: "How is DCS calculated? Show only the DCS formula.",
+    limit: 3,
+  });
+
+  for (const result of [svi, ptd, dcs]) {
+    assert.equal(result.answerMode, "methodology");
+    assert.equal(result.responseGuide.mode, "methodology");
+    assert.equal(result.entries[0].id, "data-formula-cookbook");
+  }
+
+  assert.match(svi.contextText, /\$\$SVI = 0\.20 Elderly/);
+  assert.match(svi.contextText, /Elderly, Labour, Education, Citizenship, Income, and LowCarAccess/);
+  assert.match(ptd.contextText, /\$\$PTD = 1 - PTA\$\$/);
+  assert.match(ptd.contextText, /\$\$PTD_\{display\} = 100\(1 - PTA\)\$\$/);
+  assert.match(dcs.contextText, /\$\$DCS = 100\(0\.35 source_completeness/);
+});
+
+test("retrieveAnalysisKnowledge answers simple data provenance and use questions", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question: "\u8fd9\u4e2a\u6570\u636e\u4ece\u54ea\u6765\uff1f\u600e\u4e48\u7528\uff1f",
+    limit: 4,
+  });
+
+  assert.equal(result.answerMode, "data_confidence");
+  assert.equal(result.responseGuide.mode, "data_source");
+  assert.equal(result.entries[0].id, "data-source-catalog");
+  assert.match(result.contextText, /ISTAT 2023/);
+  assert.match(result.contextText, /official GTFS/);
+  assert.match(result.contextText, /Regione Lombardia/);
+  assert.match(result.contextText, /GHSL GHS-POP 2025/);
+  assert.match(result.contextText, /100 m grid/);
+  assert.doesNotMatch(result.contextText, /city2graph/i);
+  assert.match(result.contextText, /route\/stop dependency evidence/i);
+  assert.match(result.responseGuide.structure[0], /source families/i);
+  assert.doesNotMatch(result.responseGuide.structure.join(" "), /main confidence issue/i);
+});
+
+test("retrieveAnalysisKnowledge includes conceptual RAG questions without relying on presets", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const transportPoverty = await retrieveAnalysisKnowledge({
+    question: "What does transport poverty mean in this project?",
+    limit: 3,
+  });
+  const nearbyStop = await retrieveAnalysisKnowledge({
+    question: "If there is a stop nearby, why can PTD still be high?",
+    limit: 3,
+  });
+
+  assert.equal(transportPoverty.answerMode, "overview");
+  assert.equal(transportPoverty.entries[0].id, "conceptual-001");
+  assert.match(transportPoverty.contextText, /combined diagnostic concept/i);
+  assert.match(transportPoverty.contextText, /not one single variable/i);
+
+  assert.equal(nearbyStop.entries[0].id, "conceptual-058");
+  assert.match(nearbyStop.contextText, /nearby stop does not always mean good public transport/i);
+  assert.match(nearbyStop.contextText, /PTAL\/PTOL component together/i);
+});
+
+test("retrieveAnalysisKnowledge routes Data preset source and use prompts to provenance guidance", async () => {
+  const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
+
+  const result = await retrieveAnalysisKnowledge({
+    question:
+      "Where do the dashboard data come from? How should these data be used in planning?",
+    limit: 4,
+  });
+
+  assert.equal(result.answerMode, "data_confidence");
+  assert.equal(result.responseGuide.mode, "data_source");
+  assert.equal(result.entries[0].id, "data-source-catalog");
+  assert.match(result.contextText, /treat the layers as screening and prioritization evidence/);
+  assert.doesNotMatch(result.contextText, /city2graph/i);
+  assert.match(result.responseGuide.structure[0], /source families/i);
+});
+
 test("retrieveAnalysisKnowledge routes PTAL caveat questions to project evidence", async () => {
   const { retrieveAnalysisKnowledge } = await loadAnalysisRag();
 
@@ -103,7 +224,7 @@ test("retrieveAnalysisKnowledge prefers table answers for local planning questio
         data_confidence_score: 87,
       },
       diagnosis: {
-        dominant_drivers: "essential services deficit; public transport deficit",
+        dominant_drivers: "Essential Services Deficit; Public Transport Deficit",
         suggested_intervention_family:
           "Monitor service quality and interchange conditions.",
       },
@@ -123,8 +244,8 @@ test("retrieveAnalysisKnowledge keeps comparison questions on table format", asy
     question: "Compare transport and service gaps in a table.",
     context: {
       score_breakdown: {
-        "PTAL deficit": 66,
-        "Essential services deficit": 71,
+        "Public Transport Deficit": 66,
+        "Essential Services Deficit": 71,
       },
     },
     limit: 4,
@@ -176,8 +297,8 @@ test("retrieveAnalysisKnowledge chooses a comparison template for trade-off ques
         data_confidence_score: 84,
       },
       score_breakdown: {
-        "PTAL deficit": 72,
-        "Essential services deficit": 81,
+        "Public Transport Deficit": 72,
+        "Essential Services Deficit": 81,
       },
     },
     limit: 4,

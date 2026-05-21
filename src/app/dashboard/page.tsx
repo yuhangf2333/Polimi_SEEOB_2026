@@ -1,6 +1,6 @@
 import { MilanLayerViewer } from "@/components/milan-layer-viewer";
-import { getLayerGroups } from "@/lib/layer-registry";
+import { getContextLayers, getLayerGroups } from "@/lib/layer-registry";
 
 export default function Page() {
-  return <MilanLayerViewer groups={getLayerGroups()} />;
+  return <MilanLayerViewer groups={getLayerGroups()} contextLayers={getContextLayers()} />;
 }

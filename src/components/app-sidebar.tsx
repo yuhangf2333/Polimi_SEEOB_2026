@@ -532,7 +532,7 @@ export function AppSidebar({
             isActive: activeLayerId === "analysis-dashboard",
           },
           {
-            title: "Intervention priority",
+            title: "Intervention priority index",
             url: "#",
             layerId: "analysis-intervention-priority",
             isActive: activeLayerId === "analysis-intervention-priority",
@@ -555,24 +555,6 @@ export function AppSidebar({
             layerId: "analysis-typology",
             isActive: activeLayerId === "analysis-typology",
           },
-          {
-            title: "GTFS/NeTEx dependency",
-            url: "#",
-            layerId: "analysis-transit-dependency",
-            isActive: activeLayerId === "analysis-transit-dependency",
-          },
-          {
-            title: "Hotspot clusters",
-            url: "#",
-            layerId: "analysis-hotspot-clusters",
-            isActive: activeLayerId === "analysis-hotspot-clusters",
-          },
-          {
-            title: "Critical transit stops",
-            url: "#",
-            layerId: "analysis-critical-transit-stops",
-            isActive: activeLayerId === "analysis-critical-transit-stops",
-          },
         ],
       },
       {
@@ -583,37 +565,55 @@ export function AppSidebar({
         isActive: activeId === "vulnerability",
         items: [
           {
-            title: "age vulnerability",
+            title: "Elderly vulnerability",
             url: "#",
-            layerId: "vulnerability-age",
-            isActive: activeLayerId === "vulnerability-age",
+            layerId: "vulnerability-elderly",
+            isActive: activeLayerId === "vulnerability-elderly",
           },
           {
-            title: "employment vulnerability",
+            title: "Employment vulnerability",
             url: "#",
             layerId: "vulnerability-employment",
             isActive: activeLayerId === "vulnerability-employment",
           },
           {
-            title: "gender vulnerability",
-            url: "#",
-            layerId: "vulnerability-gender",
-            isActive: activeLayerId === "vulnerability-gender",
-          },
-          {
-            title: "education vulnerability",
+            title: "Education vulnerability",
             url: "#",
             layerId: "vulnerability-education",
             isActive: activeLayerId === "vulnerability-education",
           },
           {
-            title: "citizenship vulnerability",
+            title: "Citizenship vulnerability",
             url: "#",
             layerId: "vulnerability-citizenship",
             isActive: activeLayerId === "vulnerability-citizenship",
           },
           {
-            title: "vulnerability index",
+            title: "Income vulnerability",
+            url: "#",
+            layerId: "vulnerability-income",
+            isActive: activeLayerId === "vulnerability-income",
+          },
+          {
+            title: "Motorisation",
+            url: "#",
+            layerId: "vulnerability-motorisation",
+            isActive: activeLayerId === "vulnerability-motorisation",
+          },
+          {
+            title: "Low car access",
+            url: "#",
+            layerId: "vulnerability-low-car-access",
+            isActive: activeLayerId === "vulnerability-low-car-access",
+          },
+          {
+            title: "Car dependency stress",
+            url: "#",
+            layerId: "vulnerability-car-dependency-stress",
+            isActive: activeLayerId === "vulnerability-car-dependency-stress",
+          },
+          {
+            title: "Social vulnerability index",
             url: "#",
             layerId: "vulnerability-index",
             isActive: activeLayerId === "vulnerability-index",
@@ -628,21 +628,44 @@ export function AppSidebar({
         isActive: activeId === "ptal",
         items: [
           {
-            title: "Public Transport Accessibility Level (PTAL)",
+            title: "Public transport accessibility",
             url: "#",
-            layerId: "ptal-public-transport-accessibility-level",
+            layerId: "ptal-public-transport-accessibility",
             isActive:
-              activeLayerId === "ptal-public-transport-accessibility-level",
+              activeLayerId === "ptal-public-transport-accessibility",
           },
           {
-            title: "Public Transport Opportunity Level (PTOL)",
+            title: "Public transport deficit",
             url: "#",
-            layerId: "ptal-public-transport-opportunity-level",
-            isActive:
-              activeLayerId === "ptal-public-transport-opportunity-level",
+            layerId: "ptal-public-transport-deficit",
+            isActive: activeLayerId === "ptal-public-transport-deficit",
           },
           {
-            title: "Stops",
+            title: "Service frequency",
+            url: "#",
+            layerId: "ptal-service-frequency",
+            isActive: activeLayerId === "ptal-service-frequency",
+          },
+          {
+            title: "Line availability",
+            url: "#",
+            layerId: "ptal-line-availability",
+            isActive: activeLayerId === "ptal-line-availability",
+          },
+          {
+            title: "ptal",
+            url: "#",
+            layerId: "ptal-ptal-100m-gtfs-netex",
+            isActive: activeLayerId === "ptal-ptal-100m-gtfs-netex",
+          },
+          {
+            title: "ptol",
+            url: "#",
+            layerId: "ptal-ptol-100m-gtfs-netex",
+            isActive: activeLayerId === "ptal-ptol-100m-gtfs-netex",
+          },
+          {
+            title: "Stops all",
             url: "#",
             layerId: "ptal-stops-all",
             isActive: activeLayerId === "ptal-stops-all",
@@ -657,23 +680,48 @@ export function AppSidebar({
         isActive: activeId === "services",
         items: [
           {
-            title: "Essential service points",
+            title: "Essential services accessibility",
             url: "#",
-            layerId: "services-essential-service-points",
-            isActive: activeLayerId === "services-essential-service-points",
-          },
-          {
-            title: "Essential service accessibility",
-            url: "#",
-            layerId: "services-essential-service-accessibility",
+            layerId: "services-essential-services-accessibility",
             isActive:
-              activeLayerId === "services-essential-service-accessibility",
+              activeLayerId ===
+              "services-essential-services-accessibility",
           },
           {
-            title: "Essential service gap",
+            title: "Essential services deficit",
             url: "#",
-            layerId: "services-essential-service-gap",
-            isActive: activeLayerId === "services-essential-service-gap",
+            layerId: "services-essential-service-deficit",
+            isActive: activeLayerId === "services-essential-service-deficit",
+          },
+          {
+            title: "Health access",
+            url: "#",
+            layerId: "services-health-access",
+            isActive: activeLayerId === "services-health-access",
+          },
+          {
+            title: "School access",
+            url: "#",
+            layerId: "services-school-access",
+            isActive: activeLayerId === "services-school-access",
+          },
+          {
+            title: "Job access",
+            url: "#",
+            layerId: "services-job-access",
+            isActive: activeLayerId === "services-job-access",
+          },
+          {
+            title: "Grocery access",
+            url: "#",
+            layerId: "services-grocery-access",
+            isActive: activeLayerId === "services-grocery-access",
+          },
+          {
+            title: "Services points",
+            url: "#",
+            layerId: "services-points-all",
+            isActive: activeLayerId === "services-points-all",
           },
         ],
       },
@@ -685,39 +733,86 @@ export function AppSidebar({
         isActive: activeId === "earth-observation",
         items: [
           {
-            title: "SDGSAT-1 night lights",
+            title: "EO territorial disadvantage",
             url: "#",
-            layerId: "earth-observation-sdgsat1-night-lights",
+            layerId: "earth-observation-territorial-disadvantage",
             isActive:
-              activeLayerId === "earth-observation-sdgsat1-night-lights",
+              activeLayerId ===
+              "earth-observation-territorial-disadvantage",
           },
           {
-            title: "Artificial land-cover",
+            title: "Population demand",
+            url: "#",
+            layerId: "earth-observation-population-demand",
+            isActive:
+              activeLayerId === "earth-observation-population-demand",
+          },
+          {
+            title: "Built-up density",
+            url: "#",
+            layerId: "earth-observation-built-up-density",
+            isActive:
+              activeLayerId === "earth-observation-built-up-density",
+          },
+          {
+            title: "Artificial land cover",
             url: "#",
             layerId: "earth-observation-artificial-land-cover",
             isActive:
               activeLayerId === "earth-observation-artificial-land-cover",
           },
           {
-            title: "Green/open land-cover",
+            title: "Artificial land cover 100m",
             url: "#",
-            layerId: "earth-observation-green-open-land-cover",
-            isActive:
-              activeLayerId === "earth-observation-green-open-land-cover",
-          },
-          {
-            title: "Built-up density",
-            url: "#",
-            layerId: "earth-observation-built-up-density",
-            isActive: activeLayerId === "earth-observation-built-up-density",
-          },
-          {
-            title: "Urban growth 2010-2020",
-            url: "#",
-            layerId: "earth-observation-urban-growth-2010-2020",
+            layerId: "earth-observation-artificial-land-cover-100m",
             isActive:
               activeLayerId ===
-              "earth-observation-urban-growth-2010-2020",
+              "earth-observation-artificial-land-cover-100m",
+          },
+          {
+            title: "Nighttime lights",
+            url: "#",
+            layerId: "earth-observation-nighttime-lights",
+            isActive: activeLayerId === "earth-observation-nighttime-lights",
+          },
+          {
+            title: "Nighttime lights 100m",
+            url: "#",
+            layerId: "earth-observation-nighttime-lights-100m",
+            isActive:
+              activeLayerId === "earth-observation-nighttime-lights-100m",
+          },
+          {
+            title: "Road density",
+            url: "#",
+            layerId: "earth-observation-road-density",
+            isActive: activeLayerId === "earth-observation-road-density",
+          },
+          {
+            title: "Intersection density",
+            url: "#",
+            layerId: "earth-observation-intersection-density",
+            isActive:
+              activeLayerId === "earth-observation-intersection-density",
+          },
+          {
+            title: "Road connectivity",
+            url: "#",
+            layerId: "earth-observation-road-connectivity",
+            isActive:
+              activeLayerId === "earth-observation-road-connectivity",
+          },
+          {
+            title: "Green land",
+            url: "#",
+            layerId: "earth-observation-green-land",
+            isActive: activeLayerId === "earth-observation-green-land",
+          },
+          {
+            title: "Urban growth",
+            url: "#",
+            layerId: "earth-observation-urban-growth",
+            isActive: activeLayerId === "earth-observation-urban-growth",
           },
         ],
       },
@@ -734,6 +829,7 @@ export function AppSidebar({
               alt="LIMEN"
               width={168}
               height={40}
+              loading="eager"
               unoptimized
               className="object-contain"
             />
@@ -760,6 +856,9 @@ export function AppSidebar({
               onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}
             >
               {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+              <span className="sr-only">
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

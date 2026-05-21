@@ -1,19 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ChevronDown,
   Database,
   Map,
-  Menu,
   Satellite,
   Search,
   Sparkles,
   TramFront,
   UsersRound,
-  X,
 } from "@/components/icons";
 
 const productName = "LIMEN";
@@ -36,10 +34,16 @@ const heroTabs = [
     image: `${captureRoot}/fresh-transit-dependency.png`,
     alt: "GTFS and NeTEx dependency layer showing public transport diagnostic coverage across Milan",
     panelTitle: "Four modules",
-    summary: "Social Vulnerability, Public Transport Deficit, Essential Services Deficit, and EO-Territorial Disadvantage are kept inspectable.",
+    summary: "Social Vulnerability Index, Public Transport Deficit, Essential Services Deficit, and EO-Territorial Disadvantage Index are kept inspectable.",
     stat: "4",
     statLabel: "diagnostic modules",
-    items: ["SVI", "PT deficit", "Services deficit", "EO context", "Score breakdown"],
+    items: [
+      "Social Vulnerability Index",
+      "Public Transport Deficit",
+      "Essential Services Deficit",
+      "EO-Territorial Disadvantage Index",
+      "Score breakdown",
+    ],
   },
   {
     label: "Hotspot card",
@@ -64,10 +68,10 @@ const heroTabs = [
 ];
 
 const sourceNames = [
-  "SVI",
+  "Social Vulnerability Index",
   "Public Transport Deficit",
   "Essential Services Deficit",
-  "EO-Territorial Disadvantage",
+  "EO-Territorial Disadvantage Index",
   "Hotspot Score",
   "Intervention Priority",
   "Data Confidence",
@@ -78,6 +82,11 @@ const promptExamples = [
   "Explain why this hotspot is high priority",
   "Transport or service gap: which driver matters most?",
   "Write a report paragraph with caveats and validation needs",
+];
+
+const assistantHeadlines = [
+  "Diagnose the hotspot. Explain the drivers. Rank the priority.",
+  "Intelligence for Transport Poverty Analysis",
 ];
 
 const templateCards = [
@@ -118,7 +127,7 @@ const diagnosticModules = [
     icon: Database,
   },
   {
-    title: "EO-Territorial Disadvantage",
+    title: "EO-Territorial Disadvantage Index",
     label: "Territorial observability",
     text: "Built-up density, land cover, population, night lights, roads, and growth pressure explain the spatial structure behind similar accessibility deficits.",
     icon: Satellite,
@@ -150,14 +159,9 @@ const faqs = [
       "It is a WebGIS decision-support cockpit for transport poverty analysis and intervention prioritization. The goal is to help public decision-makers diagnose hotspots, understand drivers, rank priorities, and prepare policy-oriented summaries.",
   },
   {
-    question: "Is this just a map viewer?",
-    answer:
-      "No. The briefing explicitly positions the product beyond a simple map viewer or a collection of unrelated indicators. The map is the interface, but the product logic is diagnosis, prioritization, typology, recommendation, and export.",
-  },
-  {
     question: "Which analytical modules power the platform?",
     answer:
-      "The core modules are Social Vulnerability Index, Public Transport Deficit, Essential Services Deficit, and EO-Territorial Disadvantage. Accessibility layers are converted into deficit indicators so all components point in the same decision direction.",
+      "The core modules are Social Vulnerability Index, Public Transport Deficit, Essential Services Deficit, and EO-Territorial Disadvantage Index. Accessibility layers are converted into deficit indicators so all components point in the same decision direction.",
   },
   {
     question: "What is the difference between Hotspot Score and Priority Index?",
@@ -175,11 +179,6 @@ const faqs = [
       "AI should not replace planning judgment. It receives structured scores, breakdowns, dominant drivers, confidence labels, typology, and caveats, then produces plain-language diagnosis, preliminary suggestions, validation needs, KPIs, and report-ready text.",
   },
   {
-    question: "What is the business-model boundary?",
-    answer:
-      "The recommended launch model is a hybrid consulting-plus-platform service. LIMEN sells a bounded territorial diagnosis, WebGIS cockpit, priority ranking, funding-readiness evidence, validation workshop, and policy-ready report, not a generic GIS platform or full grant-writing service.",
-  },
-  {
     question: "How does validation fit the product?",
     answer:
       "Validation is part of the method. Local actors can confirm, correct, flag uncertainty, or mark hotspots as ready for planning discussion because EO, employment, income, service, and transport layers contain different proxy and freshness limits.",
@@ -188,8 +187,17 @@ const faqs = [
 
 export function MilanHomepage() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [assistantHeadlineIndex, setAssistantHeadlineIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState(0);
   const activeTab = heroTabs[activeIndex];
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setAssistantHeadlineIndex((currentIndex) => (currentIndex + 1) % assistantHeadlines.length);
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   return (
     <main className="atlas-page milan-atlas-page milan-green-page">
@@ -234,7 +242,7 @@ export function MilanHomepage() {
               alt={activeTab.alt}
               width={1185}
               height={904}
-              preload={activeIndex === 0}
+              loading="eager"
               sizes="(max-width: 860px) 100vw, 1180px"
             />
           </div>
@@ -261,10 +269,13 @@ export function MilanHomepage() {
           <Sparkles size={16} fill="currentColor" />
           EXPLANATION AND REPORTING ASSISTANT
         </div>
-        <h2>Diagnose the hotspot. Explain the drivers. Rank the priority.</h2>
+        <h2 className="milan-rotating-heading">
+          <span className="milan-rotating-heading__text" key={assistantHeadlines[assistantHeadlineIndex]}>
+            {assistantHeadlines[assistantHeadlineIndex]}
+          </span>
+        </h2>
         <p className="atlas-section__lead">
-          The AI layer should translate structured geospatial evidence into planning language, while transparent scores
-          and local validation remain the basis for decisions.
+          The AI layer should translate structured geospatial evidence into planning language.
         </p>
 
         <div className="atlas-prompt" aria-label="Example planning prompt">
@@ -293,9 +304,6 @@ export function MilanHomepage() {
           />
         </div>
 
-        <p className="atlas-ai-footnote">
-          The assistant is framed as explanation support, not as a black-box tool that replaces planners.
-        </p>
       </section>
 
       <section className="atlas-section atlas-product" id="method">
@@ -350,16 +358,16 @@ export function MilanHomepage() {
               <div className="atlas-property-chip">Essential service gap</div>
             </div>
             <h3>Access is not only transport supply</h3>
-            <p>The briefing frames transport poverty as a mismatch between vulnerable populations, public transport, and everyday opportunities.</p>
+            <p>Transport poverty is a mismatch between vulnerable populations, public transport, and everyday opportunities.</p>
           </article>
 
           <article className="atlas-feature-card">
             <div className="atlas-window milan-window-map">
               <Image
-                src={`${captureRoot}/fresh-eo-night-lights.png`}
-                alt="Earth Observation night lights layer over satellite basemap"
-                width={1185}
-                height={904}
+                src={`${captureRoot}/milan-eo-territorial-context.png`}
+                alt="Earth Observation territorial context map"
+                width={2559}
+                height={1397}
                 sizes="(max-width: 860px) 100vw, 560px"
               />
               <div className="atlas-property-chip">EO territorial context</div>
@@ -369,22 +377,14 @@ export function MilanHomepage() {
           </article>
 
           <article className="atlas-feature-card">
-            <div className="atlas-pipeline-card milan-priority-card">
-              <h4>Priority is not severity</h4>
-              <small>Decision formula</small>
-              <div className="atlas-phase">
-                <i />
-                <i />
-                <i />
-                <i />
-              </div>
-              {["Hotspot Score", "Exposed vulnerable population", "Service criticality", "Feasibility and confidence"].map((item) => (
-                <label key={item}>
-                  <span />
-                  {item}
-                </label>
-              ))}
-              <button type="button">Review priority class</button>
+            <div className="atlas-window milan-window-map">
+              <Image
+                src={`${captureRoot}/milan-priority-ranking.png`}
+                alt="Intervention priority ranking dashboard"
+                width={2170}
+                height={1395}
+                sizes="(max-width: 860px) 100vw, 560px"
+              />
             </div>
             <h3>Ranking adds planning urgency</h3>
             <p>The Intervention Priority Index adds exposed population, service criticality, feasibility, growth mismatch, and confidence adjustment.</p>
@@ -441,9 +441,7 @@ export function MilanHomepage() {
       </section>
 
       <section className="atlas-section atlas-get-started milan-roadmap" id="roadmap">
-        <h2>
-          From briefing logic to a <a href={liveMapUrl}>live WebGIS cockpit</a>.
-        </h2>
+        <h2>Build, monitor, and explore Milan</h2>
 
         <div className="atlas-learning-grid milan-roadmap-grid">
           <article className="atlas-doc-card milan-scoring-card">
@@ -525,7 +523,7 @@ export function MilanHomepage() {
           <h2>Ready to inspect the intervention cockpit?</h2>
           <p>Open the viewer, switch outputs, and review the selected-area explanation.</p>
           <a className="atlas-footer__button" href={liveMapUrl}>
-            Launch viewer <span>-&gt;</span>
+            Launch viewer
           </a>
         </section>
 
@@ -539,10 +537,10 @@ export function MilanHomepage() {
           </nav>
           <nav aria-label="Analysis links">
             <h3>MODULES</h3>
-            <a href={liveMapUrl}>Social vulnerability</a>
-            <a href={liveMapUrl}>Public transport deficit</a>
-            <a href={liveMapUrl}>Essential services deficit</a>
-            <a href={liveMapUrl}>EO territorial disadvantage</a>
+            <a href={liveMapUrl}>Social Vulnerability Index</a>
+            <a href={liveMapUrl}>Public Transport Deficit</a>
+            <a href={liveMapUrl}>Essential Services Deficit</a>
+            <a href={liveMapUrl}>EO-Territorial Disadvantage Index</a>
           </nav>
           <nav aria-label="Decision links">
             <h3>DECISIONS</h3>
@@ -556,21 +554,13 @@ export function MilanHomepage() {
             <a href="#assistant">Prompt examples</a>
             <a href="#roadmap">Milan pilot sequence</a>
           </nav>
-          <nav aria-label="Layer notes">
-            <h3>BRIEFING LOGIC</h3>
-            <a href={liveMapUrl}>Scenario weighting</a>
-            <a href={liveMapUrl}>Hotspot typology</a>
-            <a href={liveMapUrl}>Report export</a>
-            <a href={liveMapUrl}>Local validation</a>
-          </nav>
         </div>
 
         <div className="atlas-footer__bottom">
           <a className="atlas-logo" href="#">
-            <span className="atlas-mark atlas-mark--milan" aria-hidden="true" />
             <LimenLogo className="atlas-footer-logo__image" />
           </a>
-          <p>2026 / TP-IPT WebGIS decision-support homepage demo</p>
+          <p>2026 SEEOB GROUP3 PROJECT</p>
         </div>
       </footer>
     </main>
@@ -578,60 +568,17 @@ export function MilanHomepage() {
 }
 
 function Header() {
-  const [open, setOpen] = useState(false);
-
   return (
     <header className="atlas-nav">
       <a className="atlas-logo" href="#">
         <LimenLogo className="atlas-logo__image" />
       </a>
 
-      <nav className="atlas-nav__links" aria-label="Primary navigation">
-        <a className="atlas-nav__link" href="#product-objects">
-          Product <ChevronDown size={14} />
-        </a>
-        <a className="atlas-nav__link" href="#method">
-          Scoring <ChevronDown size={14} />
-        </a>
-        <a className="atlas-nav__link" href={liveMapUrl}>
-          Live map
-        </a>
-        <a className="atlas-nav__link" href="#assistant">
-          Briefing <ChevronDown size={14} />
-        </a>
-      </nav>
-
       <div className="atlas-nav__actions">
-        <a href="#roadmap">Roadmap</a>
-        <a href={liveMapUrl}>Open viewer</a>
         <a className="atlas-btn atlas-btn--small" href={liveMapUrl}>
           Launch
         </a>
       </div>
-
-      <button
-        aria-expanded={open}
-        aria-label="Toggle menu"
-        className="atlas-nav__menu"
-        onClick={() => setOpen(!open)}
-        type="button"
-      >
-        {open ? <X size={22} /> : <Menu size={22} />}
-      </button>
-
-      {open ? (
-        <div className="atlas-nav__mobile">
-          <a href="#product-objects" onClick={() => setOpen(false)}>
-            Product
-          </a>
-          <a href="#method" onClick={() => setOpen(false)}>
-            Scoring
-          </a>
-          <a href={liveMapUrl} onClick={() => setOpen(false)}>
-            Open viewer
-          </a>
-        </div>
-      ) : null}
     </header>
   );
 }

@@ -53,6 +53,10 @@ import {
   type LlmSettings,
 } from "@/lib/llm-settings";
 import { parseChatMarkdown, type ChatMarkdownBlock } from "@/lib/chat-markdown";
+import {
+  normalizeFormulaText,
+  tokenizeFormulaText,
+} from "@/lib/formula-rendering.mjs";
 import { cn } from "@/lib/utils";
 import type {
   LayerGroupId,
@@ -81,6 +85,7 @@ type PrimaryFunction = {
 
 type MilanLayerViewerProps = {
   groups: MilanLayerGroup[];
+  contextLayers?: PublicMilanLayer[];
 };
 
 type IconProps = {
@@ -104,6 +109,7 @@ type SelectedFeature = {
 type FeatureDetailMode = "overview" | "advanced";
 type AnalysisPanelMode = "summary" | "chat";
 type ChatMarkdownTableBlock = Extract<ChatMarkdownBlock, { type: "table" }>;
+type FormulaToken = { type: "text" | "sub" | "sup"; text: string };
 
 type FeatureOverviewEntry = {
   key: string;
@@ -212,13 +218,15 @@ const GOOGLE_MAPS_EMBED_API_KEY =
   process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY;
 
 const LLM_SETTINGS_STORAGE_KEY = "milan-gis-llm-settings";
+const DASHBOARD_RUNTIME_RELOAD_KEY = "limen:dashboard-runtime-reload";
+const DASHBOARD_ERROR_RELOAD_KEY = "limen:dashboard-error-reload";
 const LARGE_SURFACE_TILE_BUFFER = 32;
 
 const DEFAULT_VISIBLE_LAYER_IDS: Record<PrimaryFunctionId, string[]> = {
-  ptal: ["ptal-public-transport-accessibility-level"],
-  services: ["services-essential-service-points"],
-  vulnerability: ["vulnerability-age"],
-  "earth-observation": ["earth-observation-sdgsat1-night-lights"],
+  ptal: ["ptal-public-transport-deficit"],
+  services: ["services-essential-service-deficit"],
+  vulnerability: ["vulnerability-index"],
+  "earth-observation": ["earth-observation-territorial-disadvantage"],
   "ai-agent": ["analysis-dashboard"],
 };
 
@@ -440,7 +448,7 @@ const PRIMARY_FUNCTIONS: PrimaryFunction[] = [
     groupId: "vulnerability",
     label: "Vulnerability",
     shortLabel: "VU",
-    description: "Social vulnerability and transport poverty signals.",
+    description: "Social Vulnerability Index and transport poverty signals.",
     accent: "#fb923c",
     icon: VulnerabilityIcon,
   },
@@ -475,31 +483,26 @@ const PRIMARY_FUNCTIONS: PrimaryFunction[] = [
 
 const FOCUS_DATA: Record<PrimaryFunctionId, string[]> = {
   ptal: [
-    "Public Transport Accessibility Level (PTAL)",
-    "Public Transport Opportunity Level (PTOL)",
-    "GTFS and NetEx stops",
-    "Bus, metro, tram and rail stop layers",
+    "Public Transport Deficit",
+    "Stop access, frequency, line availability and hub access",
+    "PTA and PTAL/PTOL components",
   ],
   services: [
-    "Essential service points",
-    "Essential service accessibility",
-    "Essential service gap",
-    "Healthcare, education, grocery and jobs",
+    "Essential Services Deficit",
+    "Healthcare, school, job and grocery access",
+    "ESA and VSEG components",
   ],
   vulnerability: [
-    "age vulnerability",
-    "employment vulnerability",
-    "gender vulnerability",
-    "education vulnerability",
-    "citizenship vulnerability",
-    "vulnerability index",
+    "Social Vulnerability Index",
+    "Elderly, labour, education and citizenship components",
+    "Income and low-car-access components",
   ],
   "earth-observation": [
-    "SDGSAT-1 night lights",
-    "Artificial land-cover",
-    "Green/open land-cover",
-    "Built-up density",
-    "Urban growth 2010-2020",
+    "EO-Territorial Disadvantage Index",
+    "Structural isolation",
+    "Dispersed settlement pressure",
+    "Growth pressure",
+    "Demand and settlement intensity",
   ],
   "ai-agent": [
     "Dashboard",
@@ -507,60 +510,226 @@ const FOCUS_DATA: Record<PrimaryFunctionId, string[]> = {
     "Hotspot score",
     "Data confidence",
     "Typology",
-    "GTFS/NeTEx dependency",
-    "Critical transit stops",
   ],
 };
 
-const PTAL_CLASSES = [
-  { value: "0", label: "0", color: "#f3f4f6" },
-  { value: "1a", label: "1a", color: "#6f879e" },
-  { value: "1b", label: "1b", color: "#4f9bbb" },
-  { value: "2", label: "2", color: "#38a7c2" },
-  { value: "3", label: "3", color: "#a7d36b" },
-  { value: "4", label: "4", color: "#eadc38" },
-  { value: "5", label: "5", color: "#e8ad70" },
-  { value: "6a", label: "6a", color: "#d95f66" },
-  { value: "6b", label: "6b", color: "#a45258" },
-];
+const PUBLIC_TRANSPORT_CONTINUOUS_LEGENDS: Record<
+  string,
+  ContinuousLegendConfig
+> = {
+  "ptal-public-transport-accessibility": {
+    label: "Public transport accessibility",
+    stops: [
+      [0, "#eff6ff"],
+      [0.25, "#bfdbfe"],
+      [0.5, "#60a5fa"],
+      [0.75, "#2563eb"],
+      [1, "#1e3a8a"],
+    ],
+  },
+  "ptal-public-transport-deficit": {
+    label: "Public transport deficit",
+    stops: [
+      [0, "#e0f2fe"],
+      [0.25, "#93c5fd"],
+      [0.5, "#3b82f6"],
+      [0.75, "#1d4ed8"],
+      [1, "#1e3a8a"],
+    ],
+  },
+  "ptal-service-frequency": {
+    label: "Service frequency",
+    stops: [
+      [0, "#eff6ff"],
+      [0.25, "#bfdbfe"],
+      [0.5, "#60a5fa"],
+      [0.75, "#2563eb"],
+      [1, "#1e3a8a"],
+    ],
+  },
+  "ptal-line-availability": {
+    label: "Line availability",
+    stops: [
+      [0, "#eff6ff"],
+      [0.25, "#bfdbfe"],
+      [0.5, "#60a5fa"],
+      [0.75, "#2563eb"],
+      [1, "#1e3a8a"],
+    ],
+  },
+  "ptal-ptal-ptol-component": {
+    label: "PTAL/PTOL component",
+    stops: [
+      [0, "#eff6ff"],
+      [0.25, "#bfdbfe"],
+      [0.5, "#60a5fa"],
+      [0.75, "#2563eb"],
+      [1, "#1e3a8a"],
+    ],
+  },
+};
 
-const PTOL_CLASSES = [
-  { value: 0, label: "0", color: "#e5edf4" },
-  { value: 1, label: "1", color: "#8bbfe0" },
-  { value: 2, label: "2", color: "#3b91c9" },
-  { value: 3, label: "3", color: "#1264a3" },
-  { value: 4, label: "4", color: "#073b7a" },
-];
+const PUBLIC_TRANSPORT_CATEGORY_LEGENDS: Record<
+  string,
+  CategoricalLegendConfig
+> = {
+  "ptal-ptal-component": {
+    label: "Public Transport Accessibility Level (PTAL)",
+    property: "PTAL_component",
+    classes: [
+      { value: "0", label: "0", color: "#f1f5f9", max: 0 },
+      { value: "1a", label: "1a", color: "#71879d", max: 0.125 },
+      { value: "1b", label: "1b", color: "#55a5c0", max: 0.25 },
+      { value: "2", label: "2", color: "#39a9be", max: 0.375 },
+      { value: "3", label: "3", color: "#a6d96a", max: 0.5 },
+      { value: "4", label: "4", color: "#f2e42d", max: 0.625 },
+      { value: "5", label: "5", color: "#edb06b", max: 0.75 },
+      { value: "6a", label: "6a", color: "#dc5f6b", max: 0.875 },
+      { value: "6b", label: "6b", color: "#a9505c" },
+    ],
+  },
+  "ptal-ptal-detailed": {
+    label: "Public Transport Accessibility Level (PTAL, 250m)",
+    property: "ptal_order",
+    classes: [
+      { value: "0", label: "0", color: "#f1f5f9", max: 0 },
+      { value: "1a", label: "1a", color: "#71879d", max: 1 },
+      { value: "1b", label: "1b", color: "#55a5c0", max: 2 },
+      { value: "2", label: "2", color: "#39a9be", max: 3 },
+      { value: "3", label: "3", color: "#a6d96a", max: 4 },
+      { value: "4", label: "4", color: "#f2e42d", max: 5 },
+      { value: "5", label: "5", color: "#edb06b", max: 6 },
+      { value: "6a", label: "6a", color: "#dc5f6b", max: 7 },
+      { value: "6b", label: "6b", color: "#a9505c" },
+    ],
+  },
+  "ptal-ptal-100m-gtfs-netex": {
+    label: "Public Transport Accessibility Level (PTAL, 100m GTFS/NeTEx)",
+    property: "ptal",
+    classes: [
+      { value: "0", label: "0", color: "#f1f5f9" },
+      { value: "1a", label: "1a", color: "#71879d" },
+      { value: "1b", label: "1b", color: "#55a5c0" },
+      { value: "2", label: "2", color: "#39a9be" },
+      { value: "3", label: "3", color: "#a6d96a" },
+      { value: "4", label: "4", color: "#f2e42d" },
+      { value: "5", label: "5", color: "#edb06b" },
+      { value: "6a", label: "6a", color: "#dc5f6b" },
+      { value: "6b", label: "6b", color: "#a9505c" },
+    ],
+  },
+  "ptal-ptol-component": {
+    label: "Public Transport Opportunity Level (PTOL)",
+    property: "PTOL_component",
+    classes: [
+      { value: "0", label: "0", color: "#e6eef5", max: 0 },
+      { value: "1", label: "1", color: "#8fc5e2", max: 0.25 },
+      { value: "2", label: "2", color: "#3f98cf", max: 0.5 },
+      { value: "3", label: "3", color: "#0f6faa", max: 0.75 },
+      { value: "4", label: "4", color: "#123f7d" },
+    ],
+  },
+  "ptal-ptol-detailed": {
+    label: "Public Transport Opportunity Level (PTOL, 250m)",
+    property: "ptol",
+    classes: [
+      { value: "0", label: "0", color: "#e6eef5", max: 0 },
+      { value: "1", label: "1", color: "#8fc5e2", max: 1 },
+      { value: "2", label: "2", color: "#3f98cf", max: 2 },
+      { value: "3", label: "3", color: "#0f6faa", max: 3 },
+      { value: "4", label: "4", color: "#123f7d" },
+    ],
+  },
+  "ptal-ptol-100m-gtfs-netex": {
+    label: "Public Transport Opportunity Level (PTOL, 100m GTFS/NeTEx)",
+    property: "ptol",
+    classes: [
+      { value: "0", label: "0", color: "#e6eef5" },
+      { value: "1", label: "1", color: "#8fc5e2" },
+      { value: "2", label: "2", color: "#3f98cf" },
+      { value: "3", label: "3", color: "#0f6faa" },
+      { value: "4", label: "4", color: "#123f7d" },
+    ],
+  },
+};
 
 const STOP_MODE_CLASSES = [
-  { value: "bus", label: "Bus", color: "#f59e0b" },
-  { value: "tram", label: "Tram", color: "#22c55e" },
-  { value: "metro", label: "Metro", color: "#ef4444" },
-  { value: "rail", label: "Rail", color: "#8b5cf6" },
+  { value: "bus", label: "Bus", color: "#2563eb" },
+  { value: "tram", label: "Tram", color: "#dc2626" },
+  { value: "metro", label: "Metro", color: "#7c3aed" },
+  { value: "rail", label: "Rail", color: "#0f766e" },
 ];
 
 const SERVICE_POINT_CLASSES = [
-  { value: "healthcare", label: "Healthcare", color: "#ef4444" },
-  { value: "education", label: "Education", color: "#3b82f6" },
-  { value: "grocery", label: "Grocery", color: "#22c55e" },
-  { value: "jobs", label: "Jobs", color: "#f59e0b" },
+  { value: "healthcare_structure", label: "Healthcare", color: "#dc2626" },
+  { value: "pharmacy", label: "Pharmacy", color: "#f97316" },
+  { value: "school", label: "School", color: "#2563eb" },
+  { value: "official_food_retail", label: "Official food retail", color: "#16a34a" },
+  { value: "osm_grocery", label: "Grocery", color: "#84cc16" },
 ];
 
-const SERVICE_ACCESSIBILITY_CLASSES = [
-  { value: "very_low", label: "Very low", color: "#e8f3ee" },
-  { value: "low", label: "Low", color: "#bde5c8" },
-  { value: "medium", label: "Medium", color: "#74c69d" },
-  { value: "high", label: "High", color: "#2d9f69" },
-  { value: "very_high", label: "Very high", color: "#0f6b43" },
-];
-
-const SERVICE_GAP_CLASSES = [
-  { value: "very_low", label: "Very low", color: "#fff7ed" },
-  { value: "low", label: "Low", color: "#fed7aa" },
-  { value: "medium", label: "Medium", color: "#fb923c" },
-  { value: "high", label: "High", color: "#e11d48" },
-  { value: "very_high", label: "Very high", color: "#881337" },
-];
+const SERVICE_CONTINUOUS_LEGENDS: Record<string, ContinuousLegendConfig> = {
+  "services-essential-services-accessibility": {
+    label: "Essential services accessibility",
+    stops: [
+      [0, "#fee2e2"],
+      [0.25, "#fdba74"],
+      [0.5, "#fde047"],
+      [0.75, "#86efac"],
+      [1, "#15803d"],
+    ],
+  },
+  "services-essential-service-deficit": {
+    label: "Essential services deficit",
+    stops: [
+      [0, "#ecfdf5"],
+      [0.25, "#86efac"],
+      [0.5, "#facc15"],
+      [0.75, "#fb923c"],
+      [1, "#b91c1c"],
+    ],
+  },
+  "services-health-access": {
+    label: "Health access",
+    stops: [
+      [0, "#fee2e2"],
+      [0.25, "#fdba74"],
+      [0.5, "#fde047"],
+      [0.75, "#86efac"],
+      [1, "#15803d"],
+    ],
+  },
+  "services-school-access": {
+    label: "School access",
+    stops: [
+      [0, "#fee2e2"],
+      [0.25, "#fdba74"],
+      [0.5, "#fde047"],
+      [0.75, "#86efac"],
+      [1, "#15803d"],
+    ],
+  },
+  "services-job-access": {
+    label: "Job access",
+    stops: [
+      [0, "#fee2e2"],
+      [0.25, "#fdba74"],
+      [0.5, "#fde047"],
+      [0.75, "#86efac"],
+      [1, "#15803d"],
+    ],
+  },
+  "services-grocery-access": {
+    label: "Grocery access",
+    stops: [
+      [0, "#fee2e2"],
+      [0.25, "#fdba74"],
+      [0.5, "#fde047"],
+      [0.75, "#86efac"],
+      [1, "#15803d"],
+    ],
+  },
+};
 
 const ANALYSIS_SCORE_CLASSES = [
   { value: 0, label: "0", color: "#eef2ff" },
@@ -579,23 +748,12 @@ const ANALYSIS_CONFIDENCE_CLASSES = [
 ];
 
 const ANALYSIS_TYPOLOGY_CLASSES = [
-  { value: "Dense underserved fringe", label: "Dense underserved fringe", color: "#b91c1c" },
-  { value: "Dispersed rural fragility", label: "Dispersed rural fragility", color: "#a16207" },
-  { value: "Growth-transport mismatch", label: "Growth-transport mismatch", color: "#c2410c" },
-  { value: "Active but disconnected area", label: "Active disconnected", color: "#7c3aed" },
-  { value: "Essential-services desert", label: "Service desert", color: "#db2777" },
-  { value: "General transport poverty hotspot", label: "General hotspot", color: "#2563eb" },
-  { value: "Lower concern", label: "Lower concern", color: "#cbd5e1" },
-];
-
-const ANALYSIS_DEPENDENCY_CLASSES = [
-  { value: "No useful PT supply", label: "No useful PT supply", color: "#7f1d1d" },
-  { value: "Frequency bottleneck", label: "Frequency bottleneck", color: "#dc2626" },
-  { value: "Bus-only low redundancy", label: "Bus-only low redundancy", color: "#f97316" },
-  { value: "Single low-frequency route dependency", label: "Single low-frequency route", color: "#f59e0b" },
-  { value: "Limited route redundancy", label: "Limited route redundancy", color: "#eab308" },
-  { value: "Moderate transit dependency", label: "Moderate dependency", color: "#38bdf8" },
-  { value: "Multimodal supported", label: "Multimodal supported", color: "#22c55e" },
+  { value: "Dense Underserved Fringe", label: "Dense underserved fringe", color: "#b91c1c" },
+  { value: "Dispersed Rural Fragility", label: "Dispersed rural fragility", color: "#a16207" },
+  { value: "Growth-Transport Mismatch", label: "Growth-transport mismatch", color: "#c2410c" },
+  { value: "Active but Disconnected", label: "Active disconnected", color: "#7c3aed" },
+  { value: "Essential-Services Desert", label: "Service desert", color: "#db2777" },
+  { value: "Mixed or lower-priority pattern", label: "Mixed/lower priority", color: "#cbd5e1" },
 ];
 
 type ContinuousLegendConfig = {
@@ -604,60 +762,138 @@ type ContinuousLegendConfig = {
   max?: number;
 };
 
+type CategoricalLegendClass = {
+  value: string;
+  label: string;
+  color: string;
+  max?: number;
+};
+
+type CategoricalLegendConfig = {
+  label: string;
+  property: string;
+  classes: CategoricalLegendClass[];
+};
+
 const EO_CONTINUOUS_LEGENDS: Record<string, ContinuousLegendConfig> = {
-  "earth-observation-sdgsat1-night-lights": {
-    label: "Night lights score",
+  "earth-observation-territorial-disadvantage": {
+    label: "EO territorial disadvantage",
     stops: [
-      [0, "#071124"],
-      [0.2, "#123a5a"],
-      [0.4, "#1f7784"],
-      [0.6, "#5ab47b"],
-      [0.8, "#d7cf65"],
-      [1, "#fff3b0"],
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
     ],
   },
-  "earth-observation-artificial-land-cover": {
-    label: "Artificial share",
+  "earth-observation-population-demand": {
+    label: "Population demand",
     stops: [
-      [0, "#fff7ed"],
-      [0.2, "#fed7aa"],
-      [0.4, "#fdba74"],
-      [0.6, "#fb923c"],
-      [0.8, "#ea580c"],
-      [1, "#7c2d12"],
-    ],
-  },
-  "earth-observation-green-open-land-cover": {
-    label: "Green/open share",
-    stops: [
-      [0, "#f7fee7"],
-      [0.2, "#d9f99d"],
-      [0.4, "#86efac"],
-      [0.6, "#4ade80"],
-      [0.8, "#16a34a"],
-      [1, "#14532d"],
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
     ],
   },
   "earth-observation-built-up-density": {
-    label: "Built-up score",
+    label: "Built-up density",
     stops: [
-      [0, "#fff7ed"],
-      [0.2, "#fed7aa"],
-      [0.4, "#fb923c"],
-      [0.6, "#ef4444"],
-      [0.8, "#b91c1c"],
-      [1, "#450a0a"],
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
     ],
   },
-  "earth-observation-urban-growth-2010-2020": {
-    label: "Urban growth score",
+  "earth-observation-artificial-land-cover": {
+    label: "Artificial land cover",
     stops: [
-      [0, "#fff1f2"],
-      [0.2, "#fecdd3"],
-      [0.4, "#fb7185"],
-      [0.6, "#e11d48"],
-      [0.8, "#9f1239"],
-      [1, "#4c0519"],
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-artificial-land-cover-100m": {
+    label: "Artificial land cover share",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-nighttime-lights": {
+    label: "Nighttime lights",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-nighttime-lights-100m": {
+    label: "Nighttime lights score",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-road-density": {
+    label: "Road density",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-intersection-density": {
+    label: "Intersection density",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-road-connectivity": {
+    label: "Road connectivity",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
+    ],
+  },
+  "earth-observation-green-land": {
+    label: "Green land",
+    stops: [
+      [0, "#f7fee7"],
+      [0.25, "#bef264"],
+      [0.5, "#65a30d"],
+      [0.75, "#3f6212"],
+      [1, "#1a2e05"],
+    ],
+  },
+  "earth-observation-urban-growth": {
+    label: "Urban growth",
+    stops: [
+      [0, "#f5f3ff"],
+      [0.25, "#c4b5fd"],
+      [0.5, "#8b5cf6"],
+      [0.75, "#6d28d9"],
+      [1, "#3b0764"],
     ],
   },
 };
@@ -678,62 +914,57 @@ const ANALYSIS_CONTINUOUS_LEGENDS: Record<string, ContinuousLegendConfig> = {
     max: 100,
     stops: ANALYSIS_CONFIDENCE_CLASSES.map((item) => [item.value, item.color]),
   },
-  "analysis-hotspot-clusters": {
-    label: "Mean priority",
-    max: 100,
-    stops: ANALYSIS_SCORE_CLASSES.map((item) => [item.value, item.color]),
-  },
 };
 
 const ANALYSIS_DASHBOARD_SUMMARY = {
-  meanPriority: 55.7,
-  meanHotspot: 55.1,
-  meanConfidence: 87.3,
-  highPriorityCells: 5970,
-  hotspotClusters: 168,
+  meanPriority: 51.3,
+  meanHotspot: 56.7,
+  meanConfidence: 89.3,
+  highPriorityCells: 2241,
+  hotspotClusters: 0,
   h3Cells: 15547,
   distribution: {
-    low: 21.8,
-    medium: 20.9,
-    high: 57.3,
+    low: 45.5,
+    medium: 40.1,
+    high: 14.4,
   },
   breakdown: [
     {
       key: "svi_score",
-      label: "Social vulnerability",
-      value: 36.1,
+      label: "Social Vulnerability Index",
+      value: 39.7,
       color: "#f97316",
     },
     {
       key: "pt_deficit_score",
-      label: "PTAL deficit",
+      label: "Public Transport Deficit",
       value: 65.5,
       color: "#2563eb",
     },
     {
       key: "essential_services_deficit_score",
-      label: "Essential services deficit",
-      value: 70.5,
+      label: "Essential Services Deficit",
+      value: 62.3,
       color: "#10b981",
     },
     {
       key: "eo_territorial_disadvantage_score",
-      label: "EO territorial disadvantage",
-      value: 33.3,
+      label: "EO-Territorial Disadvantage Index",
+      value: 48.2,
       color: "#8b5cf6",
     },
     {
       key: "data_confidence_score",
       label: "Data confidence",
-      value: 87.3,
+      value: 89.3,
       color: "#0f766e",
     },
   ],
   scenarios: [
-    { label: "Equity first", value: 55.3 },
-    { label: "Service access first", value: 59.0 },
-    { label: "Mobility network first", value: 59.8 },
-    { label: "Growth mismatch", value: 52.9 },
+    { label: "Equity first", value: 39.7 },
+    { label: "Service access first", value: 62.3 },
+    { label: "Mobility network first", value: 65.5 },
+    { label: "Growth mismatch", value: 48.2 },
   ],
 };
 
@@ -750,7 +981,7 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "Transport or service gap?",
         prompt:
-          "Is this more a transport gap or a service gap? Compare PT deficit and essential services deficit in a compact table.",
+          "Is this more a transport gap or a service gap? Compare Public Transport Deficit and Essential Services Deficit in a compact table.",
       },
       {
         label: "Which score driver matters most?",
@@ -771,7 +1002,7 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "Which stops and routes matter?",
         prompt:
-          "Which stops and routes matter here? Use city2graph route and stop dependency evidence when available.",
+          "Which stops and routes matter here? Use route and stop dependency evidence when available.",
       },
       {
         label: "Which services are hardest to reach?",
@@ -797,12 +1028,12 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "How does vulnerability affect priority?",
         prompt:
-          "How does social vulnerability affect this area's priority? Use the vulnerability score and explain how it interacts with access deficits.",
+          "How does Social Vulnerability Index affect this area's priority? Use the vulnerability score and explain how it interacts with access deficits.",
       },
       {
         label: "Does vulnerability overlap with gaps?",
         prompt:
-          "Does social vulnerability overlap with access gaps here? Compare social vulnerability, PT deficit, and essential services deficit.",
+          "Does Social Vulnerability Index overlap with access gaps here? Compare Social Vulnerability Index, Public Transport Deficit, and Essential Services Deficit.",
       },
       {
         label: "Is this an equity-first hotspot?",
@@ -823,7 +1054,7 @@ const ANALYSIS_PRESET_CATEGORIES = [
       {
         label: "What should be done first here?",
         prompt:
-          "What should be done first here? Recommend the first planning action using dominant drivers, suggested intervention family, and city2graph evidence.",
+          "What should be done first here? Recommend the first planning action using dominant drivers, suggested intervention family, and transit dependency evidence.",
       },
       {
         label: "Give me a priority action table.",
@@ -842,185 +1073,163 @@ const ANALYSIS_PRESET_CATEGORIES = [
       },
     ],
   },
+  {
+    id: "data",
+    label: "Data",
+    questions: [
+      {
+        label: "Where do these data come from?",
+        prompt:
+          "Where do the dashboard data come from? Answer simply by source family: social vulnerability, public transport, essential services, earth observation, route/stop dependency evidence, and boundary/grid processing. Include the main caveat for each family.",
+      },
+      {
+        label: "How should I use these data?",
+        prompt:
+          "How should these data be used in planning? Explain what they are good for, what must be locally validated, and which variables are proxies rather than direct observations.",
+      },
+      {
+        label: "How are the scores calculated?",
+        prompt:
+          "How are the main dashboard scores calculated? Summarize SVI, PTD, ESD, EOTD, TPHS, intervention_priority_formula_score, intervention_priority_score, and DCS using markdown display math.",
+      },
+      {
+        label: "What should be validated first?",
+        prompt:
+          "What data should be validated first before using these results for intervention planning? Prioritize transit feeds, service points, vulnerability inputs, EO proxies, and route/stop dependency plus walking-network evidence.",
+      },
+    ],
+  },
 ] satisfies AnalysisPresetCategory[];
 
-const PTAL_FILL_COLOR = [
-  "match",
-  ["get", "ptal"],
-  ...PTAL_CLASSES.flatMap((item) => [item.value, item.color]),
-  "#60a5fa",
-] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
-
-const PTAL_GRAYSCALE_COLOR = [
-  "match",
-  ["get", "ptal"],
-  "0",
-  "#f8fafc",
-  "1a",
-  "#d4d4d8",
-  "1b",
-  "#b4b4bb",
-  "2",
-  "#96969f",
-  "3",
-  "#73737d",
-  "4",
-  "#55555f",
-  "5",
-  "#3f3f46",
-  "6a",
-  "#27272a",
-  "6b",
-  "#09090b",
-  "#71717a",
-] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
-
-const PTAL_CONTRAST_COLOR = [
-  "match",
-  ["get", "ptal"],
-  "0",
-  "#ffffff",
-  "1a",
-  "#2563eb",
-  "1b",
-  "#0891b2",
-  "2",
-  "#06b6d4",
-  "3",
-  "#22c55e",
-  "4",
-  "#fde047",
-  "5",
-  "#fb923c",
-  "6a",
-  "#ef4444",
-  "6b",
-  "#7f1d1d",
-  "#2563eb",
-] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
-
-const PTAL_DARK_COLOR = [
-  "match",
-  ["get", "ptal"],
-  "0",
-  "#111827",
-  "1a",
-  "#1f2937",
-  "1b",
-  "#374151",
-  "2",
-  "#475569",
-  "3",
-  "#64748b",
-  "4",
-  "#94a3b8",
-  "5",
-  "#cbd5e1",
-  "6a",
-  "#f8fafc",
-  "6b",
-  "#ffffff",
-  "#475569",
-] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
-
-function ptalFillColor(material: LayerMaterial) {
-  if (material === "grayscale") return PTAL_GRAYSCALE_COLOR;
-  if (material === "contrast") return PTAL_CONTRAST_COLOR;
-  if (material === "dark") return PTAL_DARK_COLOR;
-  return PTAL_FILL_COLOR;
+function publicTransportContinuousLegend(layer: PublicMilanLayer) {
+  return PUBLIC_TRANSPORT_CONTINUOUS_LEGENDS[layer.id] ?? null;
 }
 
-const PTOL_FILL_COLOR = [
-  "interpolate",
-  ["linear"],
-  ["to-number", ["get", "ptol"], 0],
-  ...PTOL_CLASSES.flatMap((item) => [item.value, item.color]),
-] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
-
-function ptolFillColor() {
-  return PTOL_FILL_COLOR;
+function publicTransportCategoryLegend(layer: PublicMilanLayer) {
+  return PUBLIC_TRANSPORT_CATEGORY_LEGENDS[layer.id] ?? null;
 }
 
-const STOP_MODE_COLOR = [
-  "match",
-  ["get", "dominant_mode"],
-  ...STOP_MODE_CLASSES.flatMap((item) => [item.value, item.color]),
-  "#64748b",
-] as unknown as NonNullable<
-  CircleLayerSpecification["paint"]
->["circle-color"];
+function categoricalLegendColorExpression(legend: CategoricalLegendConfig) {
+  if (legend.classes.every((item) => item.max === undefined)) {
+    return [
+      "match",
+      ["to-string", ["get", legend.property]],
+      ...legend.classes.flatMap((item) => [item.value, item.color]),
+      VULNERABILITY_NO_DATA_COLOR,
+    ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
+  }
 
-type CircleColorPaint = NonNullable<
-  CircleLayerSpecification["paint"]
->["circle-color"];
+  const valueExpression = ["to-number", ["get", legend.property], -1];
+  const thresholds = legend.classes.flatMap((item) =>
+    item.max === undefined ? [] : [["<=", valueExpression, item.max], item.color],
+  );
+  const fallbackColor =
+    legend.classes[legend.classes.length - 1]?.color ?? VULNERABILITY_NO_DATA_COLOR;
 
-function stopModeColor(
+  return [
+    "case",
+    ["<", valueExpression, 0],
+    VULNERABILITY_NO_DATA_COLOR,
+    ...thresholds,
+    fallbackColor,
+  ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
+}
+
+function publicTransportCategoryColor(layer: PublicMilanLayer) {
+  const legend = publicTransportCategoryLegend(layer);
+  if (!legend) return null;
+
+  return categoricalLegendColorExpression(legend);
+}
+
+function publicTransportLayerColor(
   layer: PublicMilanLayer,
-  fallbackColor: CircleColorPaint,
+  material: LayerMaterial,
 ) {
-  return layer.id === "ptal-stops-all" ? STOP_MODE_COLOR : fallbackColor;
+  const categoryColor = publicTransportCategoryColor(layer);
+  if (categoryColor) return categoryColor;
+
+  const continuousLegend = publicTransportContinuousLegend(layer);
+
+  if (continuousLegend && layer.thematicProperty) {
+    return [
+      "case",
+      ["<", ["to-number", ["get", layer.thematicProperty], -1], 0],
+      VULNERABILITY_NO_DATA_COLOR,
+      [
+        "interpolate",
+        ["linear"],
+        ["to-number", ["get", layer.thematicProperty], 0],
+        ...continuousLegend.stops.flatMap(([value, color]) => [value, color]),
+      ],
+    ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
+  }
+
+  return layerMaterialColor(layer, material);
 }
 
-const SERVICE_POINT_COLOR = [
-  "match",
-  ["get", "service_theme"],
-  ...SERVICE_POINT_CLASSES.flatMap((item) => [item.value, item.color]),
-  "#64748b",
-] as unknown as NonNullable<
-  CircleLayerSpecification["paint"]
->["circle-color"];
+function stopModeClasses(layer: PublicMilanLayer) {
+  return layer.id === "ptal-stops-all" ? STOP_MODE_CLASSES : null;
+}
 
-function servicePointColor(
-  layer: PublicMilanLayer,
-  fallbackColor: CircleColorPaint,
-) {
-  return layer.id === "services-essential-service-points"
-    ? SERVICE_POINT_COLOR
-    : fallbackColor;
+function servicePointClasses(layer: PublicMilanLayer) {
+  return layer.id === "services-points-all" ? SERVICE_POINT_CLASSES : null;
+}
+
+function pointLayerColor(layer: PublicMilanLayer, fallbackColor: string) {
+  const stopClasses = stopModeClasses(layer);
+  if (stopClasses) {
+    return [
+      "match",
+      ["to-string", ["get", "dominant_mode"]],
+      ...stopClasses.flatMap((item) => [item.value, item.color]),
+      fallbackColor,
+    ] as unknown as NonNullable<CircleLayerSpecification["paint"]>["circle-color"];
+  }
+
+  const serviceClasses = servicePointClasses(layer);
+  if (serviceClasses) {
+    return [
+      "match",
+      ["to-string", ["get", "category"]],
+      ...serviceClasses.flatMap((item) => [item.value, item.color]),
+      fallbackColor,
+    ] as unknown as NonNullable<CircleLayerSpecification["paint"]>["circle-color"];
+  }
+
+  return fallbackColor;
+}
+
+function serviceContinuousLegend(layer: PublicMilanLayer) {
+  return SERVICE_CONTINUOUS_LEGENDS[layer.id] ?? null;
+}
+
+function serviceContinuousColor(layer: PublicMilanLayer) {
+  const legend = serviceContinuousLegend(layer);
+  if (!legend || !layer.thematicProperty) return null;
+
+  return [
+    "case",
+    ["<", ["to-number", ["get", layer.thematicProperty], -1], 0],
+    VULNERABILITY_NO_DATA_COLOR,
+    [
+      "interpolate",
+      ["linear"],
+      ["to-number", ["get", layer.thematicProperty], 0],
+      ...legend.stops.flatMap(([value, color]) => [value, color]),
+    ],
+  ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
 }
 
 function serviceClassColor(layer: PublicMilanLayer) {
-  const classes =
-    layer.thematicClassProperty === "priority_gap_class" ||
-    layer.thematicClassProperty === "gap_display_class"
-      ? SERVICE_GAP_CLASSES
-      : layer.thematicClassProperty === "accessibility_class"
-        ? SERVICE_ACCESSIBILITY_CLASSES
-        : null;
-
-  if (!classes) return null;
-
-  return [
-    "match",
-    ["to-string", ["get", layer.thematicClassProperty]],
-    ...classes.flatMap((item) => [item.value, item.color]),
-    VULNERABILITY_NO_DATA_COLOR,
-  ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
+  return serviceContinuousColor(layer);
 }
 
 function serviceFillOpacity(
   layer: PublicMilanLayer,
   effectiveOpacity: number,
 ) {
-  if (
-    layer.thematicClassProperty !== "accessibility_class" &&
-    layer.thematicClassProperty !== "priority_gap_class" &&
-    layer.thematicClassProperty !== "gap_display_class"
-  ) {
-    return effectiveOpacity;
-  }
-
-  const noDataOpacity = Math.min(effectiveOpacity, 0.16);
-
-  return [
-    "match",
-    ["to-string", ["get", layer.thematicClassProperty]],
-    "no_data",
-    noDataOpacity,
-    "missing",
-    noDataOpacity,
-    effectiveOpacity,
-  ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-opacity"];
+  return effectiveOpacity;
 }
 
 function analysisContinuousLegend(layer: PublicMilanLayer) {
@@ -1028,15 +1237,8 @@ function analysisContinuousLegend(layer: PublicMilanLayer) {
 }
 
 function analysisCategoryClasses(layer: PublicMilanLayer) {
-  if (
-    layer.id === "analysis-typology" ||
-    layer.id === "analysis-hotspot-clusters"
-  ) {
+  if (layer.id === "analysis-typology") {
     return ANALYSIS_TYPOLOGY_CLASSES;
-  }
-
-  if (layer.id === "analysis-transit-dependency") {
-    return ANALYSIS_DEPENDENCY_CLASSES;
   }
 
   return null;
@@ -1073,29 +1275,7 @@ function analysisLayerColor(layer: PublicMilanLayer) {
 }
 
 function analysisFillOpacity(layer: PublicMilanLayer, effectiveOpacity: number) {
-  if (layer.id === "analysis-hotspot-clusters") {
-    return Math.min(effectiveOpacity + 0.08, 0.86);
-  }
-
   return effectiveOpacity;
-}
-
-const ANALYSIS_STOP_MODE_COLOR = [
-  "match",
-  ["get", "dominant_mode"],
-  ...STOP_MODE_CLASSES.flatMap((item) => [item.value, item.color]),
-  "#64748b",
-] as unknown as NonNullable<
-  CircleLayerSpecification["paint"]
->["circle-color"];
-
-function analysisPointColor(
-  layer: PublicMilanLayer,
-  fallbackColor: CircleColorPaint,
-) {
-  return layer.id === "analysis-critical-transit-stops"
-    ? ANALYSIS_STOP_MODE_COLOR
-    : fallbackColor;
 }
 
 function earthObservationLegend(layer: PublicMilanLayer) {
@@ -1159,6 +1339,30 @@ function interpolateHexColor(
   )}, ${Math.round(lower.b + (upper.b - lower.b) * t)})`;
 }
 
+function publicTransportCategoricalColorFromValue(
+  layer: PublicMilanLayer,
+  value: unknown,
+) {
+  const legend = publicTransportCategoryLegend(layer);
+  if (!legend) return null;
+
+  if (legend.classes.every((item) => item.max === undefined)) {
+    const valueText = String(value ?? "");
+
+    return legend.classes.find((item) => item.value === valueText)?.color ?? null;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue < 0) return null;
+
+  return (
+    legend.classes.find((item) => item.max !== undefined && numericValue <= item.max)
+      ?.color ??
+    legend.classes[legend.classes.length - 1]?.color ??
+    null
+  );
+}
+
 function hexToRgb(color: string) {
   const normalized = color.replace("#", "");
   const value = Number.parseInt(normalized, 16);
@@ -1178,6 +1382,8 @@ const VULNERABILITY_PALETTES = {
   pink: ["#f9e3ef", "#d98aba", "#ad3f7d"],
   brown: ["#f5eadf", "#d1a070", "#8f5b33"],
   orange: ["#fff0d9", "#f7b267", "#d95f02"],
+  teal: ["#e0f2f1", "#5fb7ad", "#0f766e"],
+  indigo: ["#e0e7ff", "#818cf8", "#4338ca"],
 };
 
 const VULNERABILITY_GRAYSCALE = ["#f4f4f5", "#a1a1aa", "#3f3f46"];
@@ -1188,31 +1394,6 @@ const VULNERABILITY_FIGURE_COPY: Record<
   string,
   { title: string; subtitle: string; note: string }
 > = {
-  "vulnerability-age": {
-    title: "Age vulnerability",
-    subtitle: "Residents aged 65+ (2023, H3 res9)",
-    note: "Data-derived terciles from ISTAT 2023 section variables joined to H3 res9 cells",
-  },
-  "vulnerability-employment": {
-    title: "Employment vulnerability",
-    subtitle: "Non-employed residents aged 15-64 (2023, H3 res9)",
-    note: "Data-derived terciles from ISTAT 2023 section variables joined to H3 res9 cells",
-  },
-  "vulnerability-gender": {
-    title: "Gender vulnerability",
-    subtitle: "Women residents (2023, H3 res9)",
-    note: "Data-derived terciles from ISTAT 2023 section variables joined to H3 res9 cells",
-  },
-  "vulnerability-education": {
-    title: "Education vulnerability",
-    subtitle: "Low education proxy (2023, H3 res9)",
-    note: "Data-derived terciles from ISTAT 2023 section variables joined to H3 res9 cells",
-  },
-  "vulnerability-citizenship": {
-    title: "Citizenship vulnerability",
-    subtitle: "Extra-EU citizens (2023, H3 res9)",
-    note: "Data-derived terciles from ISTAT 2023 section variables joined to H3 res9 cells",
-  },
   "vulnerability-index": {
     title: "Vulnerability index",
     subtitle: "Composite social vulnerability (2023, H3 res9)",
@@ -1233,6 +1414,7 @@ function vulnerabilityFigureCopy(layer: PublicMilanLayer) {
 function vulnerabilityNoDataExpression(rankProperty?: string | null) {
   const conditions: unknown[] = [
     ["==", ["to-string", ["get", "vulnerability_class"]], "no_data"],
+    ["<=", ["to-number", ["get", "total_ghsl_population_count"], -1], 0],
   ];
 
   if (rankProperty) {
@@ -1278,9 +1460,22 @@ function vulnerabilityFillColor(
     ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
   }
 
-  const rankProperty =
-    layer.thematicRankProperty ??
-    (layer.thematicProperty ? `${layer.thematicProperty}_pct_rank` : null);
+  const rankProperty = layer.thematicRankProperty ?? null;
+  if (!rankProperty && layer.thematicProperty) {
+    const valueExpression = ["to-number", ["get", layer.thematicProperty], -1];
+
+    return [
+      "case",
+      vulnerabilityNoDataExpression(),
+      VULNERABILITY_NO_DATA_COLOR,
+      ["<", valueExpression, 1 / 3],
+      palette[0],
+      ["<", valueExpression, 2 / 3],
+      palette[1],
+      palette[2],
+    ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-color"];
+  }
+
   if (!rankProperty) return null;
 
   const rankExpression = ["to-number", ["get", rankProperty], -1];
@@ -1314,9 +1509,16 @@ function vulnerabilityFillOpacity(
     >["fill-opacity"];
   }
 
-  const rankProperty =
-    layer.thematicRankProperty ??
-    (layer.thematicProperty ? `${layer.thematicProperty}_pct_rank` : null);
+  const rankProperty = layer.thematicRankProperty ?? null;
+  if (!rankProperty && layer.thematicProperty) {
+    return [
+      "case",
+      vulnerabilityNoDataExpression(),
+      noDataOpacity,
+      effectiveOpacity,
+    ] as unknown as NonNullable<FillLayerSpecification["paint"]>["fill-opacity"];
+  }
+
   if (!rankProperty) return effectiveOpacity;
 
   return [
@@ -1376,9 +1578,11 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   operator: "Operator",
   operators: "Operators",
   ptal: "PTAL value",
+  ptal_order: "PTAL order",
   ptol: "PTOL value",
   ptol_mean: "PTOL mean",
   ptol_modes: "PTOL modes",
+  total_ghsl_population_count: "GHSL population",
   vulnerability_index: "Vulnerability index",
   vulnerability_index_filled: "Vulnerability index",
   vulnerability_class: "Vulnerability class",
@@ -1400,6 +1604,7 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   rail_access: "Rail access",
   service_theme: "Theme",
   service_type: "Service type",
+  category: "Category",
   service_type_label_en: "Service type",
   service_type_label_cn: "Service type",
   name: "Name",
@@ -1427,8 +1632,66 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   employees: "Employees",
   employees_per_km2: "Employees/km2",
   employees_per_1000_residents: "Employees/1000 residents",
-  svi_score: "SVI score",
-  pt_deficit_score: "PT deficit",
+  SVI: "Social Vulnerability Index",
+  Elderly: "Elderly component",
+  Labour: "Labour component",
+  Education: "Education component",
+  Citizenship: "Citizenship component",
+  Income: "Income component",
+  Motorisation: "Motorisation component",
+  LowCarAccess: "Low-car-access component",
+  PTA: "Public Transport Accessibility",
+  PTD: "Public Transport Deficit",
+  SA: "Stop access",
+  FR: "Frequency",
+  LA: "Line availability",
+  HA: "Hub access",
+  PTAL_component: "PTAL component",
+  PTOL_component: "PTOL component",
+  PTAL_PTOL: "PTAL/PTOL component",
+  ESA: "Essential Services Accessibility",
+  ESD: "Essential Services Deficit",
+  HealthAccess: "Healthcare access",
+  SchoolAccess: "School access",
+  JobAccess: "Job access",
+  GroceryAccess: "Grocery access",
+  VSEG: "Vulnerability-service gap",
+  EOTD: "EO-Territorial Disadvantage",
+  P: "Population demand",
+  B: "Built-up density",
+  A: "Artificial land cover",
+  L: "Nighttime lights",
+  M: "Population mask",
+  SI: "Structural isolation",
+  DS: "Dispersed settlement pressure",
+  GP: "Growth pressure",
+  DI: "Demand and settlement intensity",
+  RoadDensity: "Road density",
+  IntersectionDensity: "Intersection density",
+  R: "Road connectivity",
+  G: "Green land",
+  U: "Urban growth",
+  DUS: "Dense underserved score",
+  DRF: "Dispersed rural fragility score",
+  GTM: "Growth-transport mismatch score",
+  ABD: "Active but disconnected score",
+  SDT: "Services desert score",
+  TPHS: "Transport Poverty Hotspot Score",
+  TPHS_norm: "Normalized hotspot score",
+  TPHS_class: "Hotspot class",
+  IPI: "Intervention Priority Index",
+  IPI_class: "Priority class",
+  DCS: "Data Confidence Score",
+  DCS_source_completeness: "Source completeness",
+  DCS_spatial_resolution: "Spatial resolution",
+  DCS_temporal_freshness: "Temporal freshness",
+  DCS_data_directness: "Data directness",
+  CA: "Confidence adjustment",
+  VPE: "Vulnerable population exposure",
+  FEAS: "Feasibility screen",
+  GM: "Growth mismatch",
+  svi_score: "Social Vulnerability Index score",
+  pt_deficit_score: "Public Transport Deficit",
   essential_services_deficit_score: "Service deficit",
   eo_territorial_disadvantage_score: "EO disadvantage",
   hotspot_score: "Hotspot score",
@@ -1448,7 +1711,7 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   transit_dependency_diagnosis: "Transit diagnosis",
   recommended_gtfs_action: "GTFS action",
   ai_transit_dependency_summary: "Transit summary",
-  transport_access_score_mean: "PT deficit",
+  transport_access_score_mean: "Public Transport Deficit",
   route_count: "Routes",
   stop_count: "Stops",
   operator_count: "Operators",
@@ -1498,7 +1761,56 @@ const ATTRIBUTE_PRIORITY = [
   "n",
   "i",
   "h3_id",
+  "municipality_name",
+  "intervention_priority_score",
+  "intervention_priority_formula_score",
+  "IPI",
+  "IPI_class",
+  "hotspot_score",
+  "TPHS",
+  "TPHS_class",
+  "data_confidence_score",
+  "DCS",
+  "confidence_class",
+  "SVI",
+  "Elderly",
+  "Labour",
+  "Education",
+  "Citizenship",
+  "Income",
+  "Motorisation",
+  "LowCarAccess",
+  "CarDependencyStress",
+  "PTA",
+  "PTD",
+  "SA",
+  "FR",
+  "LA",
+  "HA",
+  "PTAL_component",
+  "PTOL_component",
+  "PTAL_PTOL",
+  "ESA",
+  "ESD",
+  "HealthAccess",
+  "SchoolAccess",
+  "JobAccess",
+  "GroceryAccess",
+  "EOTD",
+  "P",
+  "B",
+  "A",
+  "L",
+  "RoadDensity",
+  "IntersectionDensity",
+  "R",
+  "G",
+  "U",
+  "typology",
+  "dominant_drivers",
+  "suggested_intervention_family",
   "ptal",
+  "ptal_order",
   "ptol",
   "ptol_mean",
   "ai",
@@ -1509,6 +1821,9 @@ const ATTRIBUTE_PRIORITY = [
   "total_freq_per_hour",
   "line_count",
   "service_count",
+  "category",
+  "name",
+  "address",
   "accessible_services",
   "accessible_saps",
   "accessible_operators",
@@ -1564,226 +1879,155 @@ const ATTRIBUTE_PRIORITY = [
 const LAYER_OVERVIEW_ATTRIBUTE_PRIORITY: Record<string, string[]> = {
   "analysis-intervention-priority": [
     "intervention_priority_score",
+    "intervention_priority_formula_score",
+    "priority_class",
     "hotspot_score",
     "data_confidence_score",
+    "pt_deficit_score",
+    "essential_services_deficit_score",
+    "city2graph_network_penalty_score",
+    "IPI",
+    "TPHS",
+    "DCS",
     "typology",
     "dominant_drivers",
-    "transit_dependency_diagnosis",
     "suggested_intervention_family",
   ],
   "analysis-hotspot-score": [
-    "hotspot_score",
-    "priority_class",
-    "svi_score",
-    "pt_deficit_score",
-    "essential_services_deficit_score",
-    "eo_territorial_disadvantage_score",
+    "TPHS",
+    "TPHS_class",
+    "SVI",
+    "PTD",
+    "ESD",
+    "EOTD",
+    "interaction_multiplier",
     "dominant_drivers",
   ],
   "analysis-data-confidence": [
-    "data_confidence_score",
+    "DCS",
     "confidence_class",
-    "source_completeness_score",
-    "spatial_resolution_score",
-    "temporal_freshness_score",
-    "data_directness_score",
+    "DCS_source_completeness",
+    "DCS_spatial_resolution",
+    "DCS_temporal_freshness",
+    "DCS_data_directness",
   ],
   "analysis-typology": [
     "typology",
-    "typology_reason",
     "dominant_drivers",
     "suggested_intervention_family",
-    "local_validation_needs",
-    "possible_kpis",
+    "DUS",
+    "DRF",
+    "GTM",
+    "ABD",
+    "SDT",
   ],
-  "analysis-transit-dependency": [
-    "transit_dependency_diagnosis",
-    "recommended_gtfs_action",
-    "transport_access_score_mean",
-    "route_count",
-    "stop_count",
-    "primary_route_line",
-    "primary_stop_id",
-  ],
-  "analysis-hotspot-clusters": [
-    "cluster_id",
-    "h3_count",
-    "priority_score_mean",
-    "priority_score_max",
-    "hotspot_score_mean",
-    "typology",
-    "dominant_municipality",
-  ],
-  "analysis-critical-transit-stops": [
-    "stop_name",
-    "dominant_mode",
-    "lines",
-    "dependency_priority_score",
-    "dependent_h3_count",
-    "dependent_grid_count",
-    "mean_dependency_share",
-  ],
-  "ptal-public-transport-accessibility-level": [
-    "ptal",
-    "ai",
-    "mean_walk_min",
-    "mean_wait_min",
-    "accessible_services",
-    "accessible_saps",
-    "top_operator",
-  ],
-  "ptal-public-transport-opportunity-level": [
-    "ptol",
-    "ptol_mean",
-    "nearest_pt_stop_walk_min",
-    "ptol_modes",
-    "bus_access",
-    "tram_access",
-    "metro_access",
-    "rail_access",
-  ],
-  "ptal-stops-all": [
-    "stop_name",
-    "dominant_mode",
-    "modes",
-    "lines",
-    "total_freq_per_hour",
-    "line_count",
-    "service_count",
-    "operators",
-  ],
-  "services-essential-service-points": [
-    "name",
-    "service_theme",
-    "service_type_label_en",
-    "municipality",
-    "source_dataset",
-    "address",
-  ],
-  "services-essential-service-accessibility": [
-    "essential_services_accessibility_index",
-    "accessibility_class",
-    "healthcare_score",
-    "school_score",
-    "grocery_score",
-    "jobs_score",
-  ],
-  "services-essential-service-gap": [
-    "essential_services_vulnerability_gap",
-    "gap_display_class",
-    "priority_gap_class",
-    "vulnerability_index_filled",
-    "accessibility_class",
+  "ptal-public-transport-deficit": [
+    "PTD",
+    "PTA",
+    "SA",
+    "FR",
+    "LA",
+    "HA",
+    "PTAL_PTOL",
     "sampled_100m_cells",
-    "COMUNE",
+    "total_ghsl_population_count",
+    "municipality_name",
   ],
-  "vulnerability-age": [
-    "elderly_65_plus_share",
-    "elderly_65_plus_share_pct_rank",
-    "vulnerability_index_filled",
-    "vulnerability_class",
+  "services-essential-service-deficit": [
+    "ESD",
+    "ESA",
+    "HealthAccess",
+    "SchoolAccess",
+    "JobAccess",
+    "GroceryAccess",
+    "VSEG",
     "sampled_100m_cells",
-    "mean_section_population",
-  ],
-  "vulnerability-employment": [
-    "not_employed_15_64_share",
-    "not_employed_15_64_share_pct_rank",
-    "vulnerability_index_filled",
-    "vulnerability_class",
-    "sampled_100m_cells",
-    "mean_section_population",
-  ],
-  "vulnerability-gender": [
-    "female_share",
-    "female_share_pct_rank",
-    "vulnerability_index_filled",
-    "vulnerability_class",
-    "sampled_100m_cells",
-    "mean_section_population",
-  ],
-  "vulnerability-education": [
-    "low_education_share",
-    "low_education_share_pct_rank",
-    "vulnerability_index_filled",
-    "vulnerability_class",
-    "sampled_100m_cells",
-    "mean_section_population",
-  ],
-  "vulnerability-citizenship": [
-    "extra_eu_share",
-    "extra_eu_share_pct_rank",
-    "vulnerability_index_filled",
-    "vulnerability_class",
-    "sampled_100m_cells",
-    "mean_section_population",
+    "municipality_name",
   ],
   "vulnerability-index": [
-    "vulnerability_index_filled",
-    "vulnerability_class",
-    "vulnerability_index",
+    "SVI",
+    "Elderly",
+    "Labour",
+    "Education",
+    "Citizenship",
+    "Income",
+    "LowCarAccess",
     "sampled_100m_cells",
-    "mean_section_population",
+    "municipality_name",
   ],
-  "earth-observation-sdgsat1-night-lights": [
-    "sdgsat1_night_lights_class",
-    "ntl_sdgsat1_lh_score",
-    "night_lights_sdgsat1_lh_mean_2022_2023",
-    "grid_id",
-  ],
-  "earth-observation-artificial-land-cover": [
-    "artificial_landcover_class",
-    "landcover_artificial_share",
-    "grid_id",
-  ],
-  "earth-observation-green-open-land-cover": [
-    "green_open_landcover_class",
-    "landcover_green_open_share",
-    "grid_id",
-  ],
-  "earth-observation-built-up-density": [
-    "built_up_density_class",
-    "built_up_score",
-    "built_up_fraction_2020",
-    "built_surface_m2_2020",
-    "grid_id",
-  ],
-  "earth-observation-urban-growth-2010-2020": [
-    "urban_growth_2010_2020_class",
-    "urban_growth_score_2010_2020",
-    "built_up_growth_share_2010_2020",
-    "built_up_change_m2_2010_2020",
-    "grid_id",
+  "earth-observation-territorial-disadvantage": [
+    "EOTD",
+    "SI",
+    "DS",
+    "GP",
+    "DI",
+    "M",
+    "sampled_100m_cells",
+    "municipality_name",
   ],
 };
 
 const GROUP_OVERVIEW_ATTRIBUTE_PRIORITY: Partial<Record<LayerGroupId, string[]>> =
   {
     analysis: [
-      "intervention_priority_score",
-      "hotspot_score",
-      "data_confidence_score",
+      "IPI",
+      "TPHS",
+      "DCS",
       "typology",
       "dominant_drivers",
-      "transit_dependency_diagnosis",
     ],
-    ptal: ["ptal", "ptol", "ai", "dominant_mode", "modes", "lines"],
+    ptal: [
+      "PTA",
+      "PTD",
+      "SA",
+      "FR",
+      "LA",
+      "HA",
+      "PTAL_component",
+      "PTOL_component",
+      "PTAL_PTOL",
+      "stop_name",
+      "dominant_mode",
+      "line_count",
+      "service_count",
+      "total_freq_per_hour",
+    ],
     services: [
-      "service_theme",
-      "service_type_label_en",
-      "essential_services_accessibility_index",
-      "essential_services_vulnerability_gap",
-      "accessibility_class",
-      "gap_display_class",
-      "priority_gap_class",
+      "ESD",
+      "ESA",
+      "HealthAccess",
+      "SchoolAccess",
+      "JobAccess",
+      "GroceryAccess",
+      "VSEG",
     ],
-    vulnerability: ["v", "c", "n", "m"],
+    vulnerability: [
+      "SVI",
+      "Elderly",
+      "Labour",
+      "Education",
+      "Citizenship",
+      "Income",
+      "Motorisation",
+      "LowCarAccess",
+      "CarDependencyStress",
+    ],
     "earth-observation": [
-      "grid_id",
-      "ntl_sdgsat1_lh_score",
-      "landcover_artificial_share",
-      "landcover_green_open_share",
-      "built_up_score",
-      "urban_growth_score_2010_2020",
+      "EOTD",
+      "P",
+      "B",
+      "A",
+      "L",
+      "RoadDensity",
+      "IntersectionDensity",
+      "R",
+      "G",
+      "U",
+      "SI",
+      "DS",
+      "GP",
+      "DI",
+      "M",
     ],
     context: ["m", "v", "c", "n"],
   };
@@ -1818,6 +2062,53 @@ const EO_PERCENT_ATTRIBUTE_KEYS = new Set([
   "urban_growth_score_2010_2020",
 ]);
 
+const NORMALIZED_ATTRIBUTE_KEYS = new Set([
+  "SVI",
+  "Elderly",
+  "Labour",
+  "Education",
+  "Citizenship",
+  "Income",
+  "Motorisation",
+  "LowCarAccess",
+  "PTA",
+  "PTD",
+  "SA",
+  "FR",
+  "LA",
+  "HA",
+  "PTAL_component",
+  "PTOL_component",
+  "PTAL_PTOL",
+  "ESA",
+  "ESD",
+  "HealthAccess",
+  "SchoolAccess",
+  "JobAccess",
+  "GroceryAccess",
+  "VSEG",
+  "EOTD",
+  "M",
+  "SI",
+  "DS",
+  "GP",
+  "DI",
+  "DUS",
+  "DRF",
+  "GTM",
+  "ABD",
+  "SDT",
+  "VPE",
+  "FEAS",
+  "GM",
+  "CA",
+  "TPHS_norm",
+  "DCS_source_completeness",
+  "DCS_spatial_resolution",
+  "DCS_temporal_freshness",
+  "DCS_data_directness",
+]);
+
 function formatFeatureAttribute(key: string, value: unknown) {
   if (
     key === "service_theme" ||
@@ -1836,7 +2127,10 @@ function formatFeatureAttribute(key: string, value: unknown) {
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
   }
 
-  if (typeof value === "number" && EO_PERCENT_ATTRIBUTE_KEYS.has(key)) {
+  if (
+    typeof value === "number" &&
+    (EO_PERCENT_ATTRIBUTE_KEYS.has(key) || NORMALIZED_ATTRIBUTE_KEYS.has(key))
+  ) {
     return `${(value * 100).toFixed(1)}%`;
   }
 
@@ -1881,61 +2175,47 @@ function featureItemEntries(
 function featurePrimaryColor(feature: SelectedFeature) {
   const source = feature.properties ?? {};
 
-  if (feature.layer.id === "ptal-public-transport-accessibility-level") {
-    const ptal = source.ptal;
-    return (
-      PTAL_CLASSES.find((item) => item.value === String(ptal))?.color ??
-      feature.layer.style.color
-    );
-  }
-
-  if (feature.layer.id === "ptal-public-transport-opportunity-level") {
-    const ptol = Number(source.ptol ?? source.ptol_mean);
-    if (Number.isFinite(ptol)) {
-      const value = Math.max(0, Math.min(4, Math.round(ptol)));
-      return (
-        PTOL_CLASSES.find((item) => item.value === value)?.color ??
-        feature.layer.style.color
+  if (feature.layer.group === "ptal") {
+    const categoricalLegend = publicTransportCategoryLegend(feature.layer);
+    if (categoricalLegend) {
+      const categoricalValue = source[categoricalLegend.property];
+      const categoricalColor = publicTransportCategoricalColorFromValue(
+        feature.layer,
+        categoricalValue,
       );
+
+      if (categoricalColor) return categoricalColor;
+    }
+
+    const pointClass = stopModeClasses(feature.layer)?.find(
+      (item) => item.value === String(source.dominant_mode ?? "").toLowerCase(),
+    );
+    if (pointClass) return pointClass.color;
+
+    const legend = publicTransportContinuousLegend(feature.layer);
+    const value = feature.layer.thematicProperty
+      ? Number(source[feature.layer.thematicProperty])
+      : Number.NaN;
+
+    if (legend && Number.isFinite(value)) {
+      return interpolateHexColor(legend.stops, value, legend.max);
     }
   }
 
-  if (feature.layer.id === "ptal-stops-all") {
-    const mode = String(source.dominant_mode ?? source.mode ?? source.modes ?? "")
-      .toLowerCase()
-      .split(/[,;/\s]+/)[0];
-    return (
-      STOP_MODE_CLASSES.find((item) => item.value === mode)?.color ??
-      feature.layer.style.color
+  if (feature.layer.group === "services") {
+    const pointClass = servicePointClasses(feature.layer)?.find(
+      (item) => item.value === String(source.category ?? "").toLowerCase(),
     );
-  }
+    if (pointClass) return pointClass.color;
 
-  if (feature.layer.id === "services-essential-service-points") {
-    const theme = String(source.service_theme ?? "").toLowerCase();
-    return (
-      SERVICE_POINT_CLASSES.find((item) => item.value === theme)?.color ??
-      feature.layer.style.color
-    );
-  }
+    const legend = serviceContinuousLegend(feature.layer);
+    const value = feature.layer.thematicProperty
+      ? Number(source[feature.layer.thematicProperty])
+      : Number.NaN;
 
-  if (feature.layer.id === "services-essential-service-accessibility") {
-    const classValue = String(source.accessibility_class ?? "").toLowerCase();
-    return (
-      SERVICE_ACCESSIBILITY_CLASSES.find((item) => item.value === classValue)
-        ?.color ?? feature.layer.style.color
-    );
-  }
-
-  if (feature.layer.id === "services-essential-service-gap") {
-    const classValue = String(
-      source.gap_display_class ?? source.priority_gap_class ?? "",
-    ).toLowerCase();
-    return (
-      SERVICE_GAP_CLASSES.find((item) => item.value === classValue)?.color ??
-      (classValue === "no_data"
-        ? VULNERABILITY_NO_DATA_COLOR
-        : feature.layer.style.color)
-    );
+    if (legend && Number.isFinite(value)) {
+      return interpolateHexColor(legend.stops, value, legend.max);
+    }
   }
 
   if (feature.layer.group === "analysis") {
@@ -1979,20 +2259,28 @@ function featurePrimaryColor(feature: SelectedFeature) {
     const rawClass = source[feature.layer.thematicClassProperty ?? "c"];
     const palette = VULNERABILITY_PALETTES[feature.layer.palette ?? "orange"];
     const classValue = String(rawClass).toLowerCase();
+    if (Number(source.total_ghsl_population_count) <= 0) {
+      return VULNERABILITY_NO_DATA_COLOR;
+    }
     if (classValue === "0" || classValue === "low") return palette[0];
     if (classValue === "1" || classValue === "medium") return palette[1];
     if (classValue === "2" || classValue === "high") return palette[2];
     if (source.n === 1 || classValue === "-1") return VULNERABILITY_NO_DATA_COLOR;
 
-    const rankProperty =
-      feature.layer.thematicRankProperty ??
-      (feature.layer.thematicProperty
-        ? `${feature.layer.thematicProperty}_pct_rank`
-        : null);
+    const rankProperty = feature.layer.thematicRankProperty ?? null;
     const rank = rankProperty ? Number(source[rankProperty]) : Number.NaN;
     if (Number.isFinite(rank)) {
       if (rank < 1 / 3) return palette[0];
       if (rank < 2 / 3) return palette[1];
+      return palette[2];
+    }
+
+    const value = feature.layer.thematicProperty
+      ? Number(source[feature.layer.thematicProperty])
+      : Number.NaN;
+    if (Number.isFinite(value)) {
+      if (value < 1 / 3) return palette[0];
+      if (value < 2 / 3) return palette[1];
       return palette[2];
     }
   }
@@ -2145,11 +2433,12 @@ function GeoJsonLayer({
       (layer.group === "services" && layer.kind !== "point") ||
       (layer.group === "earth-observation" && layer.kind !== "point");
     const promoteId = featurePromoteId(layer);
+    const layerDataVersion = layer.displaySizeBytes ?? layer.sizeBytes;
 
     if (!map.getSource(sourceId)) {
       map.addSource(sourceId, {
         type: "geojson",
-        data: `/api/layers/${layer.id}?v=${layer.sizeBytes}`,
+        data: `/api/layers/${layer.id}?mode=display&v=${layerDataVersion}`,
         promoteId,
         buffer: isLargeSurface ? LARGE_SURFACE_TILE_BUFFER : undefined,
         tolerance: isLargeSurface ? 1.15 : undefined,
@@ -2173,10 +2462,7 @@ function GeoJsonLayer({
     const thematicColor = vulnerabilityFillColor(layer, material);
     const serviceColor = serviceClassColor(layer);
     const earthObservationColor = earthObservationClassColor(layer);
-    const publicTransportColor =
-      layer.thematicProperty === "ptol"
-        ? ptolFillColor()
-        : ptalFillColor(material);
+    const publicTransportColor = publicTransportLayerColor(layer, material);
     const polygonColor = isPublicTransportPolygon
       ? publicTransportColor
       : isAnalysisPolygon && analysisColor
@@ -2189,10 +2475,7 @@ function GeoJsonLayer({
               ? thematicColor
               : layerMaterialColor(layer, material);
     const displayColor = layerMaterialColor(layer, material);
-    const pointColor = analysisPointColor(
-      layer,
-      servicePointColor(layer, stopModeColor(layer, displayColor)),
-    );
+    const pointColor = pointLayerColor(layer, displayColor);
     const outlineColor = isContextPolygon
       ? "#1f2937"
       : isPublicTransportPolygon
@@ -2395,17 +2678,19 @@ function GeoJsonLayer({
 
     return () => {
       const currentFeatureId = selectedFeatureIdRef.current;
-      if (currentFeatureId == null || !map.getSource(sourceId)) return;
 
       try {
+        if (currentFeatureId == null || !map?.getSource(sourceId)) return;
+
         map.setFeatureState(
           { source: sourceId, id: currentFeatureId },
           { selected: false },
         );
       } catch {
         // Map style changes can remove source state before this layer unmounts.
+      } finally {
+        selectedFeatureIdRef.current = null;
       }
-      selectedFeatureIdRef.current = null;
     };
   }, [isLoaded, layer, map, selectedFeature]);
 
@@ -2417,9 +2702,7 @@ function stableLayerSourceId(layer: PublicMilanLayer) {
 }
 
 function featurePromoteId(layer: PublicMilanLayer) {
-  return layer.id === "analysis-hotspot-clusters"
-    ? "cluster_id"
-    : layer.group === "analysis" && layer.kind === "point"
+  return layer.group === "analysis" && layer.kind === "point"
       ? "sap_id"
       : layer.group === "analysis" && layer.kind !== "point"
         ? "h3_id"
@@ -2511,21 +2794,6 @@ function MapLegend({
       return <ContinuousLegend layer={activeLayer} legend={continuousLegend} />;
     }
 
-    if (activeLayer.id === "analysis-critical-transit-stops") {
-      return (
-        <LegendCard>
-          <div className="mb-2 text-sm font-medium leading-5">
-            Critical stops
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {STOP_MODE_CLASSES.map((item) => (
-              <LegendPoint key={item.value} color={item.color} label={item.label} />
-            ))}
-          </div>
-        </LegendCard>
-      );
-    }
-
     if (categories) {
       return (
         <LegendCard className="w-64">
@@ -2560,50 +2828,15 @@ function MapLegend({
     );
   }
 
-  if (activeLayer?.id === "services-essential-service-points") {
-    return (
-      <LegendCard>
-        <div className="mb-2 text-sm font-medium leading-5">
-          Essential services
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {SERVICE_POINT_CLASSES.map((item) => (
-            <LegendPoint key={item.value} color={item.color} label={item.label} />
-          ))}
-        </div>
-      </LegendCard>
-    );
-  }
+  if (activeLayer?.group === "services") {
+    const pointClasses = servicePointClasses(activeLayer);
+    const legend = serviceContinuousLegend(activeLayer);
 
-  if (activeLayer?.id === "services-essential-service-accessibility") {
-    return (
-      <LegendCard className="w-56">
-        <div className="mb-2 text-sm font-medium leading-5">
-          Essential service accessibility
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {SERVICE_ACCESSIBILITY_CLASSES.map((item) => (
-            <LegendSwatch key={item.value} color={item.color} label={item.label} />
-          ))}
-        </div>
-      </LegendCard>
-    );
-  }
+    if (pointClasses) {
+      return <CategoricalLegend title={activeLayer.name} classes={pointClasses} />;
+    }
 
-  if (activeLayer?.id === "services-essential-service-gap") {
-    return (
-      <LegendCard className="w-56">
-        <div className="mb-2 text-sm font-medium leading-5">
-          Essential service gap
-        </div>
-        <div className="flex flex-col gap-1.5">
-          {SERVICE_GAP_CLASSES.map((item) => (
-            <LegendSwatch key={item.value} color={item.color} label={item.label} />
-          ))}
-          <LegendSwatch color={VULNERABILITY_NO_DATA_COLOR} label="No data" />
-        </div>
-      </LegendCard>
-    );
+    if (legend) return <ContinuousLegend layer={activeLayer} legend={legend} />;
   }
 
   if (activeLayer?.group === "earth-observation") {
@@ -2612,55 +2845,23 @@ function MapLegend({
     if (legend) return <ContinuousLegend layer={activeLayer} legend={legend} />;
   }
 
-  if (activeFunction.id === "ptal" && activeLayer?.thematicProperty === "ptal") {
-    return (
-      <LegendCard className="w-64">
-        <div className="mb-2 text-sm font-medium leading-5">
-          Public Transport Accessibility Level (PTAL)
-          <span className="ml-2 font-normal text-slate-500">
-            4.8 km/h
-          </span>
-        </div>
+  if (activeFunction.id === "ptal" && activeLayer?.group === "ptal") {
+    const categoryLegend = publicTransportCategoryLegend(activeLayer);
+    const modeClasses = stopModeClasses(activeLayer);
+    const legend = publicTransportContinuousLegend(activeLayer);
 
-        <div className="flex flex-col gap-1.5">
-          {PTAL_CLASSES.map((item) => (
-            <LegendSwatch key={item.value} color={item.color} label={item.label} />
-          ))}
-        </div>
-      </LegendCard>
-    );
-  }
+    if (categoryLegend) {
+      return <CategoricalLegend title={categoryLegend.label} classes={categoryLegend.classes} />;
+    }
 
-  if (activeFunction.id === "ptal" && activeLayer?.thematicProperty === "ptol") {
-    return (
-      <LegendCard className="w-64">
-        <div className="mb-2 text-sm font-medium leading-5">
-          Public Transport Opportunity Level (PTOL)
-        </div>
+    if (modeClasses) {
+      return <CategoricalLegend title={activeLayer.name} classes={modeClasses} />;
+    }
 
-        <div className="flex flex-col gap-1.5">
-          {PTOL_CLASSES.map((item) => (
-            <LegendSwatch key={item.value} color={item.color} label={item.label} />
-          ))}
-        </div>
-      </LegendCard>
-    );
+    if (legend) return <ContinuousLegend layer={activeLayer} legend={legend} />;
   }
 
   if (!activeLayer) return null;
-
-  if (activeLayer.id === "ptal-stops-all") {
-    return (
-      <LegendCard>
-        <div className="mb-2 text-sm font-medium leading-5">Stops</div>
-        <div className="flex flex-col gap-1.5">
-          {STOP_MODE_CLASSES.map((item) => (
-            <LegendPoint key={item.value} color={item.color} label={item.label} />
-          ))}
-        </div>
-      </LegendCard>
-    );
-  }
 
   return (
     <LegendCard>
@@ -2743,6 +2944,25 @@ function ContinuousLegend({
         {legend.label}
       </div>
     </div>
+  );
+}
+
+function CategoricalLegend({
+  title,
+  classes,
+}: {
+  title: string;
+  classes: Array<{ color: string; label: string; value?: string }>;
+}) {
+  return (
+    <LegendCard className="w-64">
+      <div className="mb-2 text-sm font-medium leading-5">{title}</div>
+      <div className="flex flex-col gap-1.5">
+        {classes.map((item) => (
+          <LegendSwatch key={item.value ?? item.label} color={item.color} label={item.label} />
+        ))}
+      </div>
+    </LegendCard>
   );
 }
 
@@ -3422,11 +3642,13 @@ type ScoreFormulaResponse = {
 
 function AnalysisDashboard({
   groups,
+  contextLayers,
   theme,
   llmSettings,
   panelMode,
 }: {
   groups: MilanLayerGroup[];
+  contextLayers: PublicMilanLayer[];
   theme: ThemeMode;
   llmSettings: LlmSettings;
   panelMode: AnalysisPanelMode;
@@ -3434,10 +3656,10 @@ function AnalysisDashboard({
   const [selectedFeature, setSelectedFeature] =
     React.useState<SelectedFeature | null>(null);
   const priorityLayer = findLayer(groups, "analysis-intervention-priority");
-  const boundaryLayer = findLayer(
-    groups,
-    "context-boundary-citta-metropolitana-milano",
-  );
+  const boundaryLayer =
+    contextLayers.find(
+      (layer) => layer.id === "context-boundary-citta-metropolitana-milano",
+    ) ?? null;
   const selectedProps = selectedFeature?.properties ?? null;
   const priorityScore = analysisNumber(
     selectedProps,
@@ -3505,12 +3727,17 @@ function AnalysisDashboard({
   return (
     <div className="relative h-full w-full min-w-0 max-w-full overflow-y-auto lg:overflow-hidden overflow-x-hidden bg-muted/20 p-1.5 lg:p-2">
       <div className="grid min-h-full w-full min-w-0 gap-1.5 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,2.28fr)_minmax(360px,0.72fr)] lg:grid-rows-[minmax(176px,0.29fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,2.22fr)_minmax(390px,0.78fr)]">
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-2 min-h-[22rem] lg:order-none lg:col-start-1 lg:row-start-2 lg:min-h-0")}>
+        <Card
+          className={cn(
+            DASHBOARD_PANEL_CLASS,
+            panelMode === "chat" ? "order-3" : "order-2",
+            "min-h-[18rem] sm:min-h-[22rem] lg:order-none lg:col-start-1 lg:row-start-2 lg:min-h-0",
+          )}
+        >
           <CardContent className="h-full min-w-0 p-0">
             <div className="relative h-full overflow-hidden rounded-xl bg-muted">
               {priorityLayer ? (
                 <GeoMap
-                  key={`analysis-dashboard-${theme}`}
                   theme={theme}
                   center={[9.19, 45.47]}
                   zoom={9.2}
@@ -3548,11 +3775,17 @@ function AnalysisDashboard({
           </CardContent>
         </Card>
 
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-3 min-h-[22rem] lg:order-none lg:col-start-2 lg:row-span-2 lg:min-h-0")}>
+        <Card
+          className={cn(
+            DASHBOARD_PANEL_CLASS,
+            panelMode === "chat" ? "order-1" : "order-3",
+            "min-h-[18rem] sm:min-h-[22rem] lg:order-none lg:col-start-2 lg:row-span-2 lg:min-h-0",
+          )}
+        >
           <CardContent className="flex h-full min-h-0 min-w-0 flex-col gap-3 p-0">
             {panelMode === "chat" && llmSettings.enabled ? (
               <AnalysisChatBox
-                className="min-h-0 flex-1"
+                className="h-full min-h-0"
                 dashboardContext={dashboardContext}
                 llmSettings={llmSettings}
                 theme={theme}
@@ -3570,14 +3803,20 @@ function AnalysisDashboard({
           </CardContent>
         </Card>
 
-        <Card className={cn(DASHBOARD_PANEL_CLASS, "order-1 min-h-[18rem] lg:order-none lg:col-start-1 lg:row-start-1 lg:min-h-0")}>
+        <Card
+          className={cn(
+            DASHBOARD_PANEL_CLASS,
+            panelMode === "chat" ? "order-2" : "order-1",
+            "min-h-[16rem] sm:min-h-[18rem] lg:order-none lg:col-start-1 lg:row-start-1 lg:min-h-0",
+          )}
+        >
           <CardContent className="grid h-full min-h-0 min-w-0 grid-cols-1 items-stretch gap-3 overflow-hidden p-2 sm:grid-cols-[minmax(0,0.58fr)_minmax(0,1fr)] sm:items-center lg:grid-cols-[minmax(390px,0.42fr)_minmax(0,1fr)]">
             <AnalysisPrioritySummary
               priorityScore={priorityScore}
               priorityStatus={priorityStatus}
               compact
             />
-            <div className="flex min-h-0 flex-col justify-center gap-2">
+            <div className="flex min-h-0 min-w-0 flex-col justify-center gap-2 overflow-hidden">
               {breakdown.slice(0, 4).map((item) => (
                 <DashboardScoreBar
                   key={item.key}
@@ -3954,19 +4193,19 @@ function humanDriverSentence(
   const score = Math.round(driver.value);
   const prefix = role === "main" ? "The strongest signal" : "The next signal";
 
-  if (driver.label === "Essential services deficit") {
+  if (driver.label === "Essential Services Deficit") {
     return `${prefix} is access to daily services (${score}/100). Check schools, healthcare, groceries and job access before treating this as a transit-only problem.`;
   }
 
-  if (driver.label === "PTAL deficit") {
+  if (driver.label === "Public Transport Deficit") {
     return `${prefix} is public transport deficit (${score}/100). Review frequency, interchange quality and first/last-mile access before deciding between new coverage and better service.`;
   }
 
-  if (driver.label === "Social vulnerability") {
+  if (driver.label === "Social Vulnerability Index") {
     return `${prefix} is social vulnerability (${score}/100). Prioritize measures that reduce everyday travel burden for residents with fewer mobility choices.`;
   }
 
-  if (driver.label === "EO territorial disadvantage") {
+  if (driver.label === "EO-Territorial Disadvantage Index") {
     return `${prefix} is territorial context from EO data (${score}/100). Confirm whether growth, built-up intensity or land-use isolation is creating the access problem.`;
   }
 
@@ -3977,16 +4216,58 @@ function findLayer(groups: MilanLayerGroup[], id: string) {
   return groups.flatMap((group) => group.layers).find((layer) => layer.id === id) ?? null;
 }
 
+const STRICT_ANALYSIS_KEY_ALIASES: Record<string, string[]> = {
+  intervention_priority_score: ["priority_score_0_100", "IPI"],
+  intervention_priority_formula_score: ["priority_score_0_100", "IPI"],
+  hotspot_score: ["TPHS"],
+  data_confidence_score: ["DCS"],
+  priority_class: ["IPI_class"],
+  hotspot_class: ["TPHS_class"],
+  svi_score: ["SVI"],
+  pt_deficit_score: ["PTD"],
+  essential_services_deficit_score: ["ESD"],
+  eo_territorial_disadvantage_score: ["EOTD"],
+  growth_mismatch: ["GM"],
+};
+
+const STRICT_NORMALIZED_ANALYSIS_KEYS = new Set([
+  "svi_score",
+  "pt_deficit_score",
+  "essential_services_deficit_score",
+  "eo_territorial_disadvantage_score",
+  "growth_mismatch",
+  "SVI",
+  "PTD",
+  "ESD",
+  "EOTD",
+  "GM",
+]);
+
 function analysisNumber(
   properties: GeoJSON.GeoJsonProperties | null,
   key: string,
   fallback: number,
 ) {
-  const value = properties?.[key];
-  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const candidateKeys = [key, ...(STRICT_ANALYSIS_KEY_ALIASES[key] ?? [])];
+  const sourceKey = candidateKeys.find((candidate) => {
+    const value = properties?.[candidate];
+    return value !== null && value !== undefined && value !== "";
+  });
+  const value = sourceKey ? properties?.[sourceKey] : undefined;
+  const scaleValue = (numericValue: number) =>
+    STRICT_NORMALIZED_ANALYSIS_KEYS.has(key) ||
+    STRICT_NORMALIZED_ANALYSIS_KEYS.has(sourceKey ?? "")
+      ? numericValue <= 1
+        ? numericValue * 100
+        : numericValue
+      : numericValue;
+
+  if (typeof value === "number" && Number.isFinite(scaleValue(value))) {
+    return scaleValue(value);
+  }
   if (typeof value === "string") {
     const numericValue = Number(value);
-    if (Number.isFinite(numericValue)) return numericValue;
+    if (Number.isFinite(numericValue)) return scaleValue(numericValue);
   }
 
   return fallback;
@@ -3997,7 +4278,12 @@ function analysisText(
   key: string,
   fallback = "Citywide baseline",
 ) {
-  const value = properties?.[key];
+  const candidateKeys = [key, ...(STRICT_ANALYSIS_KEY_ALIASES[key] ?? [])];
+  const sourceKey = candidateKeys.find((candidate) => {
+    const value = properties?.[candidate];
+    return value !== null && value !== undefined && value !== "";
+  });
+  const value = sourceKey ? properties?.[sourceKey] : undefined;
   if (typeof value === "string" && value.trim()) return value;
   if (typeof value === "number") return String(value);
   return fallback;
@@ -4017,6 +4303,11 @@ function buildAnalysisDashboardContext({
   breakdown: Array<{ label: string; value: number }>;
 }) {
   const properties = selectedFeature?.properties ?? null;
+  const priorityFormulaScore = analysisNumber(
+    properties,
+    "intervention_priority_formula_score",
+    priorityScore,
+  );
 
   return {
     scope: selectedFeature
@@ -4034,6 +4325,7 @@ function buildAnalysisDashboardContext({
         },
     scores: {
       intervention_priority_score: priorityScore,
+      intervention_priority_formula_score: priorityFormulaScore,
       hotspot_score: hotspotScore,
       data_confidence_score: confidenceScore,
     },
@@ -4047,7 +4339,7 @@ function buildAnalysisDashboardContext({
       dominant_drivers: analysisText(
         properties,
         "dominant_drivers",
-        "PT deficit, service deficit, social vulnerability and EO context",
+        "Public Transport Deficit, Essential Services Deficit, Social Vulnerability Index and EO-Territorial Disadvantage Index",
       ),
       suggested_intervention_family: analysisText(
         properties,
@@ -4071,9 +4363,9 @@ function buildAnalysisDashboardContext({
     },
     caveats: [
       "Scores are precomputed and must not be recalculated by the LLM.",
-      "Road connectivity is a proxy derived from built-up and artificial land-cover evidence.",
-      "Service accessibility is aggregated from 100 m grid data to H3 res9.",
-      "city2graph evidence explains transit dependency and does not replace the ABCD scoring formula.",
+      "Strict formulas and source joins passed the package formula audit at 1e-9 tolerance.",
+      "TPHS and IPI are recomputed after H3 aggregation rather than averaged from 100 m scores.",
+      "Income, motorisation, jobs and feasibility remain proxy evidence and require local validation.",
     ],
   };
 }
@@ -4120,16 +4412,16 @@ function DashboardScoreBar({
           type="button"
           aria-label={`Open ${label} formula details`}
           className={cn(
-            "grid w-full items-center gap-x-3 gap-y-2 rounded-lg py-1 text-left text-sm outline-none transition hover:bg-muted/45 focus-visible:ring-2 focus-visible:ring-ring",
+            "grid min-w-0 w-full max-w-full items-center gap-x-3 gap-y-2 overflow-hidden rounded-lg py-1 text-left text-sm outline-none transition hover:bg-muted/45 focus-visible:ring-2 focus-visible:ring-ring",
             compact
-              ? "grid-cols-[minmax(0,1fr)_2.5rem] sm:grid-cols-[minmax(12rem,0.72fr)_minmax(0,1fr)_2.5rem] lg:grid-cols-[16rem_minmax(0,1fr)_2.5rem]"
+              ? "grid-cols-[minmax(0,1fr)_3rem] sm:grid-cols-[minmax(11rem,0.62fr)_minmax(6rem,1fr)_3rem] lg:grid-cols-[minmax(13rem,0.52fr)_minmax(8rem,1fr)_3rem]"
               : "grid-cols-[11rem_minmax(0,1fr)_3rem]",
           )}
         >
           <span
             className={cn(
-              "flex min-w-0 items-center gap-2 text-muted-foreground",
-              compact ? "whitespace-nowrap" : "truncate",
+              "flex min-w-0 items-center gap-2 overflow-hidden text-muted-foreground",
+              compact ? "" : "truncate",
             )}
           >
             <span
@@ -4142,11 +4434,11 @@ function DashboardScoreBar({
             >
               <ScoreBreakdownIcon scoreKey={scoreKey} />
             </span>
-            <span className={compact ? "whitespace-nowrap" : "truncate"}>
+            <span className="min-w-0 truncate">
               {label}
             </span>
           </span>
-          <span className={cn("h-1.5 rounded-full bg-muted", compact && "order-3 col-span-2 sm:order-none sm:col-span-1")}>
+          <span className={cn("h-1.5 min-w-0 rounded-full bg-muted", compact && "order-3 col-span-2 sm:order-none sm:col-span-1")}>
             <span
               className="block h-full rounded-full"
               style={{
@@ -4155,7 +4447,7 @@ function DashboardScoreBar({
               }}
             />
           </span>
-          <span className={cn("text-right font-medium tabular-nums", compact && "order-2 sm:order-none")}>
+          <span className={cn("min-w-0 text-right font-medium tabular-nums", compact && "order-2 sm:order-none")}>
             {value.toFixed(0)}
           </span>
         </button>
@@ -4230,6 +4522,9 @@ function DashboardScoreFormulaDialog({
       <DialogTitle className="sr-only">
         {details?.label ?? label} calculation
       </DialogTitle>
+      <DialogDescription className="sr-only">
+        Score formula details for {label}.
+      </DialogDescription>
       <div className="max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto px-5 py-5">
         {status === "loading" ? (
           <div className="text-sm text-muted-foreground">
@@ -4257,6 +4552,20 @@ function DashboardScoreFormulaDialog({
                 ))}
               </div>
             </section>
+            {details.sourceValues.length ? (
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold">Formula inputs</h3>
+                <div className="grid gap-1.5">
+                  {details.sourceValues.map((item) => (
+                    <ScoreComponentValue
+                      key={item.label}
+                      label={item.label}
+                      value={item.value}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -4304,6 +4613,23 @@ function ScoreContributionBar({
         className="h-2"
         style={{ "--primary": barColor } as React.CSSProperties}
       />
+      <span className="text-right font-medium tabular-nums">
+        {formatFormulaNumber(value)}
+      </span>
+    </div>
+  );
+}
+
+function ScoreComponentValue({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-3 text-sm">
+      <span className="min-w-0 text-muted-foreground">{label}</span>
       <span className="text-right font-medium tabular-nums">
         {formatFormulaNumber(value)}
       </span>
@@ -4650,6 +4976,19 @@ function AnalysisChatBox({
 
         answer += decoder.decode();
         if (!answer.trim()) throw new Error("AI explanation failed");
+        const finalAnswer = answer;
+        setMessages((current) => {
+          const next = [...current];
+          if (next[next.length - 1]?.role === "assistant") {
+            next[next.length - 1] = {
+              role: "assistant",
+              content: finalAnswer,
+            };
+          } else {
+            next.push({ role: "assistant", content: finalAnswer });
+          }
+          return next;
+        });
         setState({ status: "success", answer, error: null });
       } catch (error) {
         const message =
@@ -4666,12 +5005,16 @@ function AnalysisChatBox({
 
   return (
     <div
+      data-analysis-chat-box
       className={cn(
-        "flex min-h-0 flex-col overflow-hidden rounded-2xl bg-background/95 p-4 shadow-sm ring-1 ring-border/50 backdrop-blur",
+        "flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-background/95 p-4 shadow-sm ring-1 ring-border/50 backdrop-blur",
         className,
       )}
     >
-      <ScrollArea className="min-h-0 flex-1 overflow-x-hidden rounded-2xl bg-muted/25">
+      <ScrollArea
+        data-analysis-chat-scroll
+        className="min-h-0 max-h-[min(16rem,calc(100svh-22rem))] flex-none overflow-x-hidden rounded-2xl bg-muted/25 lg:max-h-none lg:flex-1"
+      >
         <div className="flex min-w-0 flex-col gap-5 p-4">
           {messages.slice(-6).map((message, index) => (
             <div
@@ -4717,7 +5060,10 @@ function AnalysisChatBox({
         </div>
       </ScrollArea>
 
-      <div className="mt-3 overflow-hidden rounded-2xl bg-background/90 shadow-sm ring-1 ring-border/50">
+      <div
+        data-analysis-chat-presets
+        className="mt-3 shrink-0 overflow-hidden rounded-2xl bg-background/90 shadow-sm ring-1 ring-border/50"
+      >
         <Button
           type="button"
           variant="ghost"
@@ -4735,7 +5081,7 @@ function AnalysisChatBox({
         </Button>
         {showPresets ? (
           <div className="grid gap-2 border-t p-2">
-            <div className="grid grid-cols-4 gap-1 rounded-xl bg-muted/60 p-1">
+            <div className="grid grid-cols-5 gap-1 rounded-xl bg-muted/60 p-1">
               {ANALYSIS_PRESET_CATEGORIES.map((category) => (
                 <Button
                   key={category.id}
@@ -4773,7 +5119,10 @@ function AnalysisChatBox({
         ) : null}
       </div>
 
-      <div className="mt-3 flex min-h-[104px] flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60">
+      <div
+        data-analysis-chat-input
+        className="mt-3 flex min-h-[104px] shrink-0 flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60"
+      >
         <div className="min-h-0 flex-1">
           <Textarea
             ref={promptRef}
@@ -4853,6 +5202,10 @@ function ChatMessageContent({
   return (
     <div className="flex w-full min-w-0 max-w-full flex-col gap-3 overflow-hidden">
       {blocks.map((block, index) => {
+        if (block.type === "math") {
+          return <FormulaBlock key={index} text={block.text} muted={muted} />;
+        }
+
         if (block.type === "list") {
           if (block.ordered) {
             return (
@@ -4865,7 +5218,7 @@ function ChatMessageContent({
               >
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex} className="pl-1">
-                    {renderInlineMarkdown(item, muted)}
+                    {renderParagraphMarkdown(item, muted)}
                   </li>
                 ))}
               </ol>
@@ -4888,7 +5241,9 @@ function ChatMessageContent({
                       muted && "text-primary-foreground",
                     )}
                   />
-                  <span>{renderInlineMarkdown(item, muted)}</span>
+                  <span className="min-w-0">
+                    {renderParagraphMarkdown(item, muted)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -4903,6 +5258,21 @@ function ChatMessageContent({
               muted={muted}
               theme={theme}
             />
+          );
+        }
+
+        if (isFormulaParagraphText(block.text)) {
+          return (
+            <div
+              key={index}
+              className={cn(
+                "text-[13px] leading-6 font-normal text-foreground/80",
+                block.emphasis && "text-foreground/90",
+                muted && "text-primary-foreground/90",
+              )}
+            >
+              {renderParagraphMarkdown(block.text, muted)}
+            </div>
           );
         }
 
@@ -5139,6 +5509,68 @@ function tableAlignmentClass(alignment: "left" | "center" | "right") {
   return "text-left";
 }
 
+function FormulaBlock({
+  text,
+  muted = false,
+}: {
+  text: string;
+  muted?: boolean;
+}) {
+  return (
+    <div
+      data-analysis-math-block
+      data-analysis-formula-block
+      className={cn(
+        "max-h-36 max-w-full overflow-auto rounded-xl bg-muted/60 px-3 py-2 text-[13px] leading-7 text-foreground whitespace-pre-wrap break-words overscroll-contain [overflow-wrap:anywhere] [scrollbar-gutter:stable]",
+        muted && "bg-primary-foreground/10 text-primary-foreground",
+      )}
+      aria-label={normalizeFormulaText(text)}
+    >
+      <FormulaText text={text} muted={muted} />
+    </div>
+  );
+}
+
+function FormulaText({
+  text,
+  muted = false,
+}: {
+  text: string;
+  muted?: boolean;
+}) {
+  const tokens = tokenizeFormulaText(text) as FormulaToken[];
+
+  return (
+    <span
+      data-analysis-formula-rendered
+      className={cn(
+        "font-medium tracking-normal text-inherit tabular-nums",
+        muted && "text-primary-foreground",
+      )}
+    >
+      {tokens.map((token, index) => {
+        if (token.type === "sub") {
+          return (
+            <sub key={index} className="text-[0.72em] leading-none">
+              {token.text}
+            </sub>
+          );
+        }
+
+        if (token.type === "sup") {
+          return (
+            <sup key={index} className="text-[0.72em] leading-none">
+              {token.text}
+            </sup>
+          );
+        }
+
+        return <React.Fragment key={index}>{token.text}</React.Fragment>;
+      })}
+    </span>
+  );
+}
+
 function renderParagraphMarkdown(text: string, muted = false) {
   const labelMatch =
     text.match(/^\*\*([^*]{2,96}:)\*\*\s*(.*)$/) ??
@@ -5147,6 +5579,7 @@ function renderParagraphMarkdown(text: string, muted = false) {
   if (labelMatch) {
     const label = labelMatch[1];
     const body = labelMatch[2] ?? "";
+    const formula = isFormulaLabel(label) ? extractInlineFormula(body) : null;
 
     return (
       <>
@@ -5158,7 +5591,13 @@ function renderParagraphMarkdown(text: string, muted = false) {
         >
           {label}
         </strong>
-        {body ? <> {renderInlineMarkdown(body, muted)}</> : null}
+        {formula ? (
+          <div className="mt-2">
+            <FormulaBlock text={formula} muted={muted} />
+          </div>
+        ) : body ? (
+          <> {renderInlineMarkdown(body, muted)}</>
+        ) : null}
       </>
     );
   }
@@ -5166,8 +5605,40 @@ function renderParagraphMarkdown(text: string, muted = false) {
   return renderInlineMarkdown(text, muted);
 }
 
+function isFormulaLabel(label: string) {
+  return label.replace(/\*/g, "").trim().toLowerCase() === "formula:";
+}
+
+function isFormulaParagraphText(text: string) {
+  const labelMatch =
+    text.match(/^\*\*([^*]{2,96}:)\*\*\s*(.*)$/) ??
+    text.match(/^([^:]{2,96}:)\s+(.+)$/);
+
+  return Boolean(labelMatch && isFormulaLabel(labelMatch[1]));
+}
+
+function extractInlineFormula(text: string) {
+  const trimmed = text.trim();
+  const dollarMatch =
+    trimmed.match(/^\$([\s\S]+)\$$/) ?? trimmed.match(/\$([\s\S]+?)\$/);
+  if (dollarMatch?.[1]) return dollarMatch[1].trim();
+
+  const parenMatch =
+    trimmed.match(/^\\\(([\s\S]+)\\\)$/) ??
+    trimmed.match(/\\\(([\s\S]+?)\\\)/);
+  if (parenMatch?.[1]) return parenMatch[1].trim();
+
+  if (/\\(?:times|frac|sum|sqrt|le|ge)|[A-Za-z0-9)]\s*=\s*|_/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
+}
+
 function renderInlineMarkdown(text: string, muted = false) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+  const parts = text
+    .split(/(\*\*[^*]+\*\*|\$[^$\n]+\$|\\\([^\n]+?\\\))/g)
+    .filter(Boolean);
 
   return parts.map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
@@ -5181,6 +5652,28 @@ function renderInlineMarkdown(text: string, muted = false) {
         >
           {part.slice(2, -2)}
         </strong>
+      );
+    }
+
+    if (
+      (part.startsWith("$") && part.endsWith("$")) ||
+      (part.startsWith("\\(") && part.endsWith("\\)"))
+    ) {
+      const textContent = part.startsWith("$")
+        ? part.slice(1, -1)
+        : part.slice(2, -2);
+
+      return (
+        <span
+          key={index}
+          data-analysis-inline-math
+          className={cn(
+            "inline-flex max-w-full overflow-x-auto rounded bg-muted px-1.5 py-0.5 align-middle text-[0.92em] text-foreground whitespace-nowrap",
+            muted && "bg-primary-foreground/15 text-primary-foreground",
+          )}
+        >
+          <FormulaText text={textContent} muted={muted} />
+        </span>
       );
     }
 
@@ -5212,6 +5705,15 @@ async function exportAnalysisReport({
   if (h3Id) params.set("h3_id", h3Id);
   if (municipalityName) params.set("municipality", municipalityName);
 
+  const reportWindow = window.open("", "_blank", "width=980,height=1200");
+  if (!reportWindow) return;
+
+  reportWindow.document.open();
+  reportWindow.document.write(
+    '<!doctype html><html><head><title>Preparing report</title></head><body style="font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;margin:40px;color:#111827"><h1 style="font-size:20px">Preparing report...</h1><p>Loading analysis context.</p></body></html>',
+  );
+  reportWindow.document.close();
+
   let reportContext: AnalysisReportContext = {};
 
   try {
@@ -5226,8 +5728,7 @@ async function exportAnalysisReport({
     reportContext = {};
   }
 
-  const reportWindow = window.open("", "_blank", "width=980,height=1200");
-  if (!reportWindow) return;
+  if (reportWindow.closed) return;
 
   reportWindow.document.open();
   reportWindow.document.write(
@@ -5297,7 +5798,12 @@ function buildAnalysisReportHtml({
   const reportBreakdown = buildReportBreakdownRows(selectedCard, breakdown);
   const dominantDrivers = reportList(
     selectedCard?.dominant_drivers ?? context.diagnosis.dominant_drivers,
-    ["PT deficit", "essential services deficit", "social vulnerability", "EO context"],
+    [
+      "Public Transport Deficit",
+      "Essential Services Deficit",
+      "Social Vulnerability Index",
+      "EO-Territorial Disadvantage Index",
+    ],
   );
   const interventionItems = reportList(
     selectedCard?.suggested_intervention_family ??
@@ -5336,7 +5842,7 @@ function buildAnalysisReportHtml({
   const typology = selectedCard?.typology ?? context.diagnosis.typology;
   const typologyReason =
     selectedCard?.typology_reason ??
-    "Typology is assigned from the dominant score pattern and EO context.";
+    "Typology is assigned from the dominant score pattern and EO-Territorial Disadvantage Index context.";
   const transit = selectedCard?.transit_dependency;
   const eoScore = reportBreakdown.find((item) => item.key === "eo")?.value ?? 0;
   const growthMismatch = reportBreakdown.find((item) => item.key === "growth")?.value ?? 0;
@@ -5511,7 +6017,7 @@ function buildAnalysisReportHtml({
               <div class="map-caption">Hotspot Score<br><span class="label">${Math.round(reportHotspot)}/100</span></div>
             </div>
             <div class="gradient" style="margin-top:10px"></div>
-            <p style="margin-top:8px">Hotspot score highlights where overlapping vulnerability, service deficit and transport poverty signals concentrate.</p>
+            <p style="margin-top:8px">Hotspot score highlights where overlapping Social Vulnerability Index, Essential Services Deficit and transport poverty signals concentrate.</p>
           </div>
           <div>
             <div class="map-plate">
@@ -5519,7 +6025,7 @@ function buildAnalysisReportHtml({
               <div class="map-caption">Intervention Priority Index<br><span class="label">${Math.round(reportPriority)}/100</span></div>
             </div>
             <div class="gradient" style="margin-top:10px"></div>
-            <p style="margin-top:8px">The intervention index combines demand, accessibility deficit, service deficit, EO context and confidence.</p>
+            <p style="margin-top:8px">The intervention index combines normalized hotspot score, vulnerable population exposure, feasibility, growth mismatch and confidence adjustment.</p>
           </div>
         </div>
       </section>
@@ -5579,7 +6085,7 @@ function buildAnalysisReportHtml({
 
       <section>
         <h2>7. EO territorial interpretation</h2>
-        <div class="quote">EO territorial disadvantage score: <strong>${eoScore.toFixed(1)} / 100</strong>. Growth mismatch signal: <strong>${growthMismatch.toFixed(1)} / 100</strong>. This indicator is used as territorial interpretation evidence from night lights, built-up density, artificial land-cover, green/open land-cover and recent change patterns. It supports diagnosis but does not replace local validation.</div>
+        <div class="quote">EO-Territorial Disadvantage Index score: <strong>${eoScore.toFixed(1)} / 100</strong>. Growth mismatch signal: <strong>${growthMismatch.toFixed(1)} / 100</strong>. This indicator is used as territorial interpretation evidence from structural isolation, dispersed settlement pressure, growth pressure, and demand/settlement intensity. It supports diagnosis but does not replace local validation.</div>
       </section>
 
       <section>
@@ -5672,41 +6178,41 @@ function buildReportBreakdownRows(
   return [
     {
       key: "social",
-      label: "Social vulnerability",
+      label: "Social Vulnerability Index",
       value: reportBreakdownValue(
         card,
         "social_vulnerability",
-        fallbackByLabel.get("Social vulnerability") ?? 0,
+        fallbackByLabel.get("Social Vulnerability Index") ?? 0,
       ),
       color: "#f97316",
     },
     {
       key: "pt",
-      label: "Public transport deficit",
+      label: "Public Transport Deficit",
       value: reportBreakdownValue(
         card,
         "public_transport_deficit",
-        fallbackByLabel.get("PTAL deficit") ?? 0,
+        fallbackByLabel.get("Public Transport Deficit") ?? 0,
       ),
       color: "#2563eb",
     },
     {
       key: "services",
-      label: "Essential services deficit",
+      label: "Essential Services Deficit",
       value: reportBreakdownValue(
         card,
         "essential_services_deficit",
-        fallbackByLabel.get("Essential services deficit") ?? 0,
+        fallbackByLabel.get("Essential Services Deficit") ?? 0,
       ),
       color: "#10b981",
     },
     {
       key: "eo",
-      label: "EO territorial disadvantage",
+      label: "EO-Territorial Disadvantage Index",
       value: reportBreakdownValue(
         card,
         "eo_territorial_disadvantage",
-        fallbackByLabel.get("EO territorial disadvantage") ?? 0,
+        fallbackByLabel.get("EO-Territorial Disadvantage Index") ?? 0,
       ),
       color: "#8b5cf6",
     },
@@ -5797,6 +6303,7 @@ function escapeHtml(value: unknown) {
 function MilanMapCanvas({
   theme,
   groups,
+  contextLayers,
   activeFunction,
   activeLayers,
   activeLayerIds,
@@ -5818,6 +6325,7 @@ function MilanMapCanvas({
 }: {
   theme: ThemeMode;
   groups: MilanLayerGroup[];
+  contextLayers: PublicMilanLayer[];
   activeFunction: PrimaryFunction;
   activeLayers: PublicMilanLayer[];
   activeLayerIds: Set<string>;
@@ -5841,21 +6349,15 @@ function MilanMapCanvas({
   const isAnalysisDashboard =
     activeFunction.id === "ai-agent" && activeLayerIds.has("analysis-dashboard");
   const isVulnerabilityMode = activeFunction.id === "vulnerability";
-  const shouldShowBoundary =
-    activeFunction.id === "ai-agent" ||
-    activeFunction.id === "vulnerability" ||
-    activeFunction.id === "ptal" ||
-    activeFunction.id === "earth-observation";
-  const contextLayers = shouldShowBoundary
-    ? (groups.find((group) => group.id === "context")?.layers ?? []).filter(
-        (layer) => layer.id === "context-boundary-citta-metropolitana-milano",
-      )
-    : [];
+  const boundaryLayers = contextLayers.filter(
+    (layer) => layer.id === "context-boundary-citta-metropolitana-milano",
+  );
 
   if (isAnalysisDashboard) {
     return (
       <AnalysisDashboard
         groups={groups}
+        contextLayers={boundaryLayers}
         theme={theme}
         llmSettings={llmSettings}
         panelMode={analysisPanelMode}
@@ -5888,7 +6390,6 @@ function MilanMapCanvas({
         onClose={onCloseDetail}
       />
       <GeoMap
-        key={`${theme}-${basemap}`}
         theme={theme}
         center={[9.19, 45.47]}
         zoom={9.2}
@@ -5908,7 +6409,7 @@ function MilanMapCanvas({
             onFeatureSelect={onFeatureSelect}
           />
         ))}
-        {contextLayers.map((layer) => (
+        {boundaryLayers.map((layer) => (
           <GeoJsonLayer
             key={layer.id}
             layer={layer}
@@ -5924,7 +6425,19 @@ function MilanMapCanvas({
   );
 }
 
-export function MilanLayerViewer({ groups }: MilanLayerViewerProps) {
+export function MilanLayerViewer({
+  groups,
+  contextLayers = [],
+}: MilanLayerViewerProps) {
+  React.useEffect(() => {
+    try {
+      window.sessionStorage.removeItem(DASHBOARD_RUNTIME_RELOAD_KEY);
+      window.sessionStorage.removeItem(DASHBOARD_ERROR_RELOAD_KEY);
+    } catch {
+      // Best-effort recovery cleanup; dashboard rendering should not depend on storage access.
+    }
+  }, []);
+
   const layers = React.useMemo(
     () => groups.flatMap((group) => group.layers),
     [groups],
@@ -6066,6 +6579,7 @@ export function MilanLayerViewer({ groups }: MilanLayerViewerProps) {
             <MilanMapCanvas
               theme={theme}
               groups={groups}
+              contextLayers={contextLayers}
               activeFunction={activeFunction}
               activeLayers={activeLayers}
               activeLayerIds={activeLayerIds}

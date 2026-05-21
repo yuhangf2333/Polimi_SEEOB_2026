@@ -158,26 +158,44 @@ function extractH3IdFromAnalysisContext(context: unknown) {
   if (!context || typeof context !== "object") return null;
 
   const record = context as Record<string, unknown>;
-  const scope = record.scope;
-  if (!scope || typeof scope !== "object" || Array.isArray(scope)) return null;
+  const scope = readRecord(record.scope);
+  const selectedFeature = readRecord(record.selectedFeature);
+  const selectedProperties = readRecord(selectedFeature?.properties);
+  const candidates = [
+    scope?.h3_id,
+    scope?.h3Id,
+    scope?.h3,
+    record.h3_id,
+    record.h3Id,
+    record.h3,
+    selectedProperties?.h3_id,
+    selectedProperties?.h3Id,
+    selectedProperties?.h3,
+  ];
 
-  return normalizeH3Id((scope as Record<string, unknown>).h3_id);
+  for (const candidate of candidates) {
+    const normalized = normalizeH3Id(candidate);
+    if (normalized) return normalized;
+  }
+
+  return null;
 }
 
 async function resolveTransitDependencyPaths(dataRoot?: string) {
-  const candidateRoots = [
+  const candidateRoots = uniqueDefined([
     dataRoot,
     process.env.CITY2GRAPH_TRANSIT_DATA_ROOT,
-    path.join(
-      process.cwd(),
-      "..",
-      "city2graphy_milano",
-      "gtfs_netex_transit_dependency_graph",
-      "outputs",
-      "data",
-    ),
-    path.join(process.cwd(), "data", "city2graph", "transit_dependency"),
-  ].filter((root): root is string => Boolean(root));
+    ...candidateBaseDirs().flatMap((baseDir) => [
+      path.join(
+        baseDir,
+        "city2graphy_milano",
+        "gtfs_netex_transit_dependency_graph",
+        "outputs",
+        "data",
+      ),
+      path.join(baseDir, "data", "city2graph", "transit_dependency"),
+    ]),
+  ]);
 
   for (const root of candidateRoots) {
     const paths = {
@@ -200,25 +218,53 @@ async function resolveTransitDependencyPaths(dataRoot?: string) {
 }
 
 async function resolveWalkingAccessPath(dataRoot?: string) {
-  const candidates = [
+  const candidates = uniqueDefined([
     dataRoot ? path.join(dataRoot, "milan_bc_walking_network_access.csv") : null,
     process.env.CITY2GRAPH_WALKING_ACCESS_CSV,
-    path.join(
-      process.cwd(),
-      "..",
-      "city2graphy_milano",
-      "outputs",
-      "walking_network_bc_full",
-      "milan_bc_walking_network_access.csv",
-    ),
-    path.join(process.cwd(), "data", "city2graph", "walking_network", "milan_bc_walking_network_access.csv"),
-  ].filter((candidate): candidate is string => Boolean(candidate));
+    ...candidateBaseDirs().flatMap((baseDir) => [
+      path.join(
+        baseDir,
+        "city2graphy_milano",
+        "outputs",
+        "walking_network_bc_full",
+        "milan_bc_walking_network_access.csv",
+      ),
+      path.join(
+        baseDir,
+        "data",
+        "city2graph",
+        "walking_network",
+        "milan_bc_walking_network_access.csv",
+      ),
+    ]),
+  ]);
 
   for (const candidate of candidates) {
     if (await pathsExist([candidate])) return candidate;
   }
 
   return null;
+}
+
+function candidateBaseDirs() {
+  const cwd = process.cwd();
+
+  return uniqueDefined([
+    cwd,
+    path.join(cwd, ".."),
+    path.join(cwd, "..", ".."),
+    path.join(cwd, "..", "..", ".."),
+  ]).map((dir) => path.resolve(dir));
+}
+
+function uniqueDefined(candidates: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(
+      candidates
+        .filter((candidate): candidate is string => Boolean(candidate))
+        .map((candidate) => path.resolve(candidate)),
+    ),
+  );
 }
 
 async function pathsExist(paths: string[]) {
@@ -404,15 +450,15 @@ function formatCity2graphRelationshipContext({
   sources,
 }: Omit<City2graphRelationshipContext, "contextText">) {
   const parts = [
-    `[city2graph-relationships] Structured current H3 transit dependency relationships`,
-    `Source files: ${sources.map((source) => source.id).join(", ")}`,
+    `[transit-dependency-relationships] Structured current H3 Transit dependency relationships`,
+    `Source evidence: transit summary, route and stop dependency evidence${sources.some((source) => source.id.includes("nearest-walking-access")) ? ", nearest walking-access grid" : ""}`,
     `H3: ${h3Id}`,
   ];
 
   if (summary) {
     parts.push(
       [
-        `Transit diagnosis: ${summary.transitDependencyDiagnosis ?? "n/a"}.`,
+        `Transit dependency summary: ${summary.transitDependencyDiagnosis ?? "n/a"}.`,
         `Primary route: ${summary.primaryRouteLine ?? "n/a"} (${summary.primaryRouteMode ?? "n/a"}, ${summary.primaryRouteOperator ?? "n/a"}) with ${formatShare(summary.primaryRouteDependencyShare)} dependency share.`,
         `Primary stop: ${summary.primaryStopId ?? "n/a"} with ${formatShare(summary.primaryStopDependencyShare)} dependency share.`,
         `Network evidence: ${formatCount(summary.routeCount)} routes, ${formatCount(summary.stopCount)} stops, ${formatCount(summary.modeCount)} modes, mean wait ${formatMinutes(summary.meanWaitMin)}, mean walk ${formatMinutes(summary.meanWalkMin)}, redundancy score ${formatNumber(summary.transitDependencyRedundancyScore)}.`,
@@ -479,25 +525,30 @@ function extractProjectedCoordinateFromAnalysisContext(context: unknown) {
   if (!context || typeof context !== "object") return null;
 
   const record = context as Record<string, unknown>;
-  const scope = record.scope;
-  if (!scope || typeof scope !== "object" || Array.isArray(scope)) return null;
+  const scopeRecord = readRecord(record.scope);
+  const coordinateSources = [scopeRecord, record].filter(
+    (source): source is Record<string, unknown> => Boolean(source),
+  );
 
-  const scopeRecord = scope as Record<string, unknown>;
-  const projected = readRecord(scopeRecord.selected_coordinate_projected);
-  if (projected) {
-    const x = readFiniteNumber(projected.x);
-    const y = readFiniteNumber(projected.y);
-    if (x != null && y != null) return { x, y };
+  for (const source of coordinateSources) {
+    const projected = readRecord(source.selected_coordinate_projected);
+    if (projected) {
+      const x = readFiniteNumber(projected.x);
+      const y = readFiniteNumber(projected.y);
+      if (x != null && y != null) return { x, y };
+    }
   }
 
-  const coordinate = readRecord(scopeRecord.selected_coordinate);
-  if (coordinate) {
-    const longitude =
-      readFiniteNumber(coordinate.longitude) ?? readFiniteNumber(coordinate.lon);
-    const latitude =
-      readFiniteNumber(coordinate.latitude) ?? readFiniteNumber(coordinate.lat);
-    if (longitude != null && latitude != null) {
-      return projectLonLatToUtm32(longitude, latitude);
+  for (const source of coordinateSources) {
+    const coordinate = readRecord(source.selected_coordinate);
+    if (coordinate) {
+      const longitude =
+        readFiniteNumber(coordinate.longitude) ?? readFiniteNumber(coordinate.lon);
+      const latitude =
+        readFiniteNumber(coordinate.latitude) ?? readFiniteNumber(coordinate.lat);
+      if (longitude != null && latitude != null) {
+        return projectLonLatToUtm32(longitude, latitude);
+      }
     }
   }
 

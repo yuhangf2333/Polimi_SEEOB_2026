@@ -18,7 +18,9 @@ export type LayerPalette =
   | "purple"
   | "pink"
   | "brown"
-  | "orange";
+  | "orange"
+  | "teal"
+  | "indigo";
 
 export type LayerStyle = {
   color: string;
@@ -34,6 +36,9 @@ export type MilanLayer = {
   fileName: string;
   filePath: string;
   sizeBytes: number;
+  displayFileName?: string;
+  displayFilePath?: string;
+  displaySizeBytes?: number;
   defaultVisible?: boolean;
   style: LayerStyle;
   thematicProperty?: string;
@@ -41,9 +46,10 @@ export type MilanLayer = {
   thematicRankProperty?: string;
   thematicClassProperty?: string;
   palette?: LayerPalette;
+  visibleInLayerMenu?: boolean;
 };
 
-export type PublicMilanLayer = Omit<MilanLayer, "filePath"> & {
+export type PublicMilanLayer = Omit<MilanLayer, "filePath" | "displayFilePath"> & {
   sizeLabel: string;
   isLarge: boolean;
 };
@@ -84,25 +90,25 @@ export const layerGroupMeta: Record<
   ptal: {
     id: "ptal",
     name: "Public Transport Accessibility",
-    description: "PTAL, PTOL, stops and NetEx accessibility surfaces.",
+    description: "Strict recalculated public transport deficit surface.",
     color: colors.ptal,
   },
   services: {
     id: "services",
     name: "Essential Services",
-    description: "Healthcare, education, grocery and employment access.",
+    description: "Strict recalculated essential services deficit surface.",
     color: colors.services,
   },
   vulnerability: {
     id: "vulnerability",
     name: "Social Vulnerability",
-    description: "Age, employment, gender, education, citizenship and index layers.",
+    description: "Strict recalculated Social Vulnerability Index.",
     color: colors.vulnerability,
   },
   "earth-observation": {
     id: "earth-observation",
     name: "EO Territorial Context",
-    description: "Earth observation and municipal context outputs.",
+    description: "Strict recalculated EO-Territorial Disadvantage Index.",
     color: colors.eo,
   },
   context: {
@@ -139,6 +145,8 @@ export function getPublicLayers(): PublicMilanLayer[] {
     kind: layer.kind,
     fileName: layer.fileName,
     sizeBytes: layer.sizeBytes,
+    displayFileName: layer.displayFileName,
+    displaySizeBytes: layer.displaySizeBytes,
     defaultVisible: layer.defaultVisible,
     style: layer.style,
     thematicProperty: layer.thematicProperty,
@@ -146,18 +154,27 @@ export function getPublicLayers(): PublicMilanLayer[] {
     thematicRankProperty: layer.thematicRankProperty,
     thematicClassProperty: layer.thematicClassProperty,
     palette: layer.palette,
+    visibleInLayerMenu: layer.visibleInLayerMenu,
     sizeLabel: formatBytes(layer.sizeBytes),
     isLarge: layer.sizeBytes >= 50 * 1024 * 1024,
   }));
 }
 
-export function getLayerGroups(): MilanLayerGroup[] {
-  const publicLayers = getPublicLayers();
+export function getContextLayers(): PublicMilanLayer[] {
+  return getPublicLayers().filter((layer) => layer.group === "context");
+}
 
-  return Object.values(layerGroupMeta).map((group) => ({
-    ...group,
-    layers: publicLayers.filter((layer) => layer.group === group.id),
-  }));
+export function getLayerGroups(): MilanLayerGroup[] {
+  const publicLayers = getPublicLayers().filter(
+    (layer) => layer.visibleInLayerMenu !== false,
+  );
+
+  return Object.values(layerGroupMeta)
+    .filter((group) => group.id !== "context")
+    .map((group) => ({
+      ...group,
+      layers: publicLayers.filter((layer) => layer.group === group.id),
+    }));
 }
 
 function readPublicTransportLayers(): MilanLayer[] {
@@ -171,33 +188,130 @@ function readPublicTransportLayers(): MilanLayer[] {
     Omit<MilanLayer, "group" | "filePath" | "sizeBytes">
   > = [
     {
-      id: "ptal-public-transport-accessibility-level",
-      name: "Public Transport Accessibility Level (PTAL)",
+      id: "ptal-public-transport-accessibility",
+      name: "Public transport accessibility",
       description:
-        "GTFS and NetEx public transport accessibility level at H3 100 m support.",
+        "Strict H3 public transport accessibility computed from stop access, frequency, line availability, hub access, and the PTAL/PTOL component.",
       kind: "polygon",
-      fileName: "ptal_4_8_h3_100m_gtfs_netex_fast.geojson",
-      defaultVisible: true,
-      style: { color: colors.ptal, opacity: 0.62 },
-      thematicProperty: "ptal",
+      fileName: "h3_public_transport_accessibility.geojson",
+      style: { color: "#2563eb", opacity: 0.68 },
+      thematicProperty: "PTA",
+      palette: "blue",
     },
     {
-      id: "ptal-public-transport-opportunity-level",
-      name: "Public Transport Opportunity Level (PTOL)",
+      id: "ptal-public-transport-deficit",
+      name: "Public transport deficit",
       description:
-        "GTFS and NetEx public transport opportunity level at H3 100 m support.",
+        "Strict H3 public transport deficit computed as 1 - public transport accessibility.",
       kind: "polygon",
-      fileName: "ptol_4_8_h3_100m_gtfs_netex_fast.geojson",
-      style: { color: "#0ea5e9", opacity: 0.62 },
+      fileName: "h3_public_transport_deficit.geojson",
+      defaultVisible: true,
+      style: { color: "#2563eb", opacity: 0.68 },
+      thematicProperty: "PTD",
+      palette: "blue",
+    },
+    {
+      id: "ptal-service-frequency",
+      name: "Service frequency",
+      description: "Strict H3 service-frequency sub-score from reachable public transport frequency per hour.",
+      kind: "polygon",
+      fileName: "h3_pt_service_frequency.geojson",
+      style: { color: "#3b82f6", opacity: 0.66 },
+      thematicProperty: "FR",
+      palette: "blue",
+    },
+    {
+      id: "ptal-line-availability",
+      name: "Line availability",
+      description: "Strict H3 line-availability sub-score from accessible public transport line count.",
+      kind: "polygon",
+      fileName: "h3_pt_line_availability.geojson",
+      style: { color: "#1d4ed8", opacity: 0.66 },
+      thematicProperty: "LA",
+      palette: "blue",
+    },
+    {
+      id: "ptal-ptal-component",
+      name: "PTAL component",
+      description: "Strict H3 PTAL-like component retained in the public transport accessibility formula.",
+      kind: "polygon",
+      fileName: "h3_ptal_component.geojson",
+      style: { color: "#2563eb", opacity: 0.64 },
+      thematicProperty: "PTAL_component",
+      palette: "blue",
+      visibleInLayerMenu: false,
+    },
+    {
+      id: "ptal-ptal-detailed",
+      name: "PTAL detailed 250m",
+      description: "Fine 250 m PTAL class surface for inspecting local public transport accessibility levels.",
+      kind: "polygon",
+      fileName: "milan_metropolitan_ptal_250m.geojson",
+      style: { color: "#0ea5b7", opacity: 0.62 },
+      thematicProperty: "ptal_order",
+      palette: "teal",
+      visibleInLayerMenu: false,
+    },
+    {
+      id: "ptal-ptal-100m-gtfs-netex",
+      name: "ptal",
+      description: "Original 100 m GTFS/NeTEx PTAL class surface retained for fine-grained comparison with the strict H3 component.",
+      kind: "polygon",
+      fileName: "ptal_4_8_h3_100m_gtfs_netex_web.geojson",
+      style: { color: "#0ea5b7", opacity: 0.62 },
+      thematicProperty: "ptal",
+      palette: "teal",
+    },
+    {
+      id: "ptal-ptol-component",
+      name: "PTOL component",
+      description: "Strict H3 PTOL-like reachable-mode component retained in the public transport accessibility formula.",
+      kind: "polygon",
+      fileName: "h3_ptol_component.geojson",
+      style: { color: "#2563eb", opacity: 0.64 },
+      thematicProperty: "PTOL_component",
+      palette: "blue",
+      visibleInLayerMenu: false,
+    },
+    {
+      id: "ptal-ptol-detailed",
+      name: "PTOL detailed 250m",
+      description: "Fine 250 m PTOL opportunity level surface showing locally reachable public transport modes.",
+      kind: "polygon",
+      fileName: "milan_metropolitan_ptol_official_250m.geojson",
+      style: { color: "#1d4ed8", opacity: 0.62 },
       thematicProperty: "ptol",
+      palette: "blue",
+      visibleInLayerMenu: false,
+    },
+    {
+      id: "ptal-ptol-100m-gtfs-netex",
+      name: "ptol",
+      description: "Original 100 m GTFS/NeTEx PTOL opportunity surface retained for fine-grained modal opportunity inspection.",
+      kind: "polygon",
+      fileName: "ptol_4_8_h3_100m_gtfs_netex_web.geojson",
+      style: { color: "#1d4ed8", opacity: 0.62 },
+      thematicProperty: "ptol",
+      palette: "blue",
+    },
+    {
+      id: "ptal-ptal-ptol-component",
+      name: "PTAL/PTOL component",
+      description: "Strict H3 combined PTAL/PTOL component used in the public transport accessibility formula.",
+      kind: "polygon",
+      fileName: "h3_ptal_ptol_component.geojson",
+      style: { color: "#2563eb", opacity: 0.64 },
+      thematicProperty: "PTAL_PTOL",
+      palette: "blue",
+      visibleInLayerMenu: false,
     },
     {
       id: "ptal-stops-all",
-      name: "Stops",
-      description: "All GTFS and NetEx public transport stops.",
+      name: "Stops all",
+      description: "All strict GTFS/NeTEx stop and service access points used by the public transport layers.",
       kind: "point",
       fileName: "stops_all_gtfs_netex.geojson",
-      style: { color: "#111827", opacity: 0.9 },
+      style: { color: "#2563eb", opacity: 0.9 },
     },
   ];
 
@@ -225,14 +339,19 @@ function readAnalysisLayers(): MilanLayer[] {
   > = [
     {
       id: "analysis-intervention-priority",
-      name: "Intervention priority",
+      name: "Intervention priority index",
       description:
-        "Default TP-IPT decision layer. Robust 0-100 priority score for ranking planning urgency.",
+        "Strict TP-IPT decision layer. Robust 0-100 Intervention Priority Index for ranking planning urgency.",
       kind: "polygon",
-      fileName: "tp_ipt_analysis_h3_res9_fast.geojson",
+      fileName: "h3_intervention_priority_index.geojson",
       defaultVisible: true,
       style: { color: colors.analysis, opacity: 0.82 },
       thematicProperty: "intervention_priority_score",
+      thematicProperties: [
+        "intervention_priority_score",
+        "intervention_priority_formula_score",
+        "IPI",
+      ],
       thematicClassProperty: "priority_class",
       palette: "red",
     },
@@ -242,10 +361,10 @@ function readAnalysisLayers(): MilanLayer[] {
       description:
         "Transport poverty hotspot score combining social vulnerability, PT deficit, service deficit and EO disadvantage.",
       kind: "polygon",
-      fileName: "tp_ipt_analysis_h3_res9_fast.geojson",
+      fileName: "h3_transport_poverty_hotspot_score.geojson",
       style: { color: "#e11d48", opacity: 0.82 },
-      thematicProperty: "hotspot_score",
-      thematicClassProperty: "hotspot_class",
+      thematicProperty: "TPHS",
+      thematicClassProperty: "TPHS_class",
       palette: "orange",
     },
     {
@@ -254,9 +373,9 @@ function readAnalysisLayers(): MilanLayer[] {
       description:
         "Weighted source completeness, spatial resolution, temporal freshness and data directness score.",
       kind: "polygon",
-      fileName: "tp_ipt_analysis_h3_res9_fast.geojson",
+      fileName: "h3_data_confidence_score.geojson",
       style: { color: "#0f766e", opacity: 0.82 },
-      thematicProperty: "data_confidence_score",
+      thematicProperty: "DCS",
       thematicClassProperty: "confidence_class",
       palette: "green",
     },
@@ -266,44 +385,10 @@ function readAnalysisLayers(): MilanLayer[] {
       description:
         "Rule-based explanation of why an H3 cell is critical or lower concern.",
       kind: "polygon",
-      fileName: "tp_ipt_analysis_h3_res9_fast.geojson",
+      fileName: "h3_hotspot_typology.geojson",
       style: { color: "#7c3aed", opacity: 0.82 },
       thematicClassProperty: "typology",
       palette: "purple",
-    },
-    {
-      id: "analysis-transit-dependency",
-      name: "GTFS/NeTEx dependency",
-      description:
-        "Transit dependency explanation layer generated from GTFS/NeTEx route and stop relations.",
-      kind: "polygon",
-      fileName: "gtfs_netex_transit_dependency_h3_res9_fast.geojson",
-      style: { color: "#0ea5e9", opacity: 0.78 },
-      thematicProperty: "transport_access_score_mean",
-      thematicClassProperty: "transit_dependency_diagnosis",
-      palette: "blue",
-    },
-    {
-      id: "analysis-hotspot-clusters",
-      name: "Hotspot clusters",
-      description:
-        "Contiguous H3 clusters where hotspot score >= 60 or priority score >= 70.",
-      kind: "polygon",
-      fileName: "tp_ipt_hotspot_clusters.geojson",
-      style: { color: "#f97316", opacity: 0.68 },
-      thematicProperty: "priority_score_mean",
-      thematicClassProperty: "typology",
-      palette: "orange",
-    },
-    {
-      id: "analysis-critical-transit-stops",
-      name: "Critical transit stops",
-      description:
-        "Transit stops ranked by dependent H3 cells and dependency priority score.",
-      kind: "point",
-      fileName: "critical_transit_stop_nodes.geojson",
-      style: { color: "#111827", opacity: 0.9 },
-      thematicProperty: "dependency_priority_score",
     },
   ];
 
@@ -330,37 +415,75 @@ function readServicesLayers(): MilanLayer[] {
     Omit<MilanLayer, "group" | "filePath" | "sizeBytes">
   > = [
     {
-      id: "services-essential-service-points",
-      name: "Essential service points",
+      id: "services-essential-services-accessibility",
+      name: "Essential services accessibility",
       description:
-        "Healthcare, education, grocery and employment proxy service points.",
-      kind: "point",
-      fileName: "service_points_all.geojson",
-      defaultVisible: true,
-      style: { color: colors.services, opacity: 0.9 },
-    },
-    {
-      id: "services-essential-service-accessibility",
-      name: "Essential service accessibility",
-      description: "Essential service accessibility index aggregated to H3 res9.",
+        "Strict H3 essential services accessibility from health, school, job and grocery access components.",
       kind: "polygon",
-      fileName: "essential_services_accessibility_h3_res9_fast.geojson",
-      style: { color: colors.services, opacity: 0.82 },
-      thematicProperty: "essential_services_accessibility_index",
-      thematicClassProperty: "accessibility_class",
+      fileName: "h3_essential_services_accessibility.geojson",
+      style: { color: "#10b981", opacity: 0.78 },
+      thematicProperty: "ESA",
       palette: "green",
     },
     {
-      id: "services-essential-service-gap",
-      name: "Essential service gap",
+      id: "services-essential-service-deficit",
+      name: "Essential services deficit",
       description:
-        "Priority gap between social vulnerability and essential service access.",
+        "Strict H3 essential services deficit computed from healthcare, school, job and grocery access.",
       kind: "polygon",
-      fileName: "essential_services_accessibility_h3_res9_fast.geojson",
+      fileName: "h3_essential_services_deficit.geojson",
+      defaultVisible: true,
       style: { color: "#e11d48", opacity: 0.82 },
-      thematicProperty: "essential_services_vulnerability_gap",
-      thematicClassProperty: "gap_display_class",
+      thematicProperty: "ESD",
       palette: "red",
+    },
+    {
+      id: "services-health-access",
+      name: "Health access",
+      description: "Strict H3 healthcare accessibility component.",
+      kind: "polygon",
+      fileName: "h3_health_access.geojson",
+      style: { color: "#10b981", opacity: 0.74 },
+      thematicProperty: "HealthAccess",
+      palette: "green",
+    },
+    {
+      id: "services-school-access",
+      name: "School access",
+      description: "Strict H3 school accessibility component.",
+      kind: "polygon",
+      fileName: "h3_school_access.geojson",
+      style: { color: "#10b981", opacity: 0.74 },
+      thematicProperty: "SchoolAccess",
+      palette: "green",
+    },
+    {
+      id: "services-job-access",
+      name: "Job access",
+      description: "Strict H3 employment-opportunity accessibility component.",
+      kind: "polygon",
+      fileName: "h3_job_access.geojson",
+      style: { color: "#10b981", opacity: 0.74 },
+      thematicProperty: "JobAccess",
+      palette: "green",
+    },
+    {
+      id: "services-grocery-access",
+      name: "Grocery access",
+      description: "Strict H3 grocery accessibility component.",
+      kind: "polygon",
+      fileName: "h3_grocery_access.geojson",
+      style: { color: "#10b981", opacity: 0.74 },
+      thematicProperty: "GroceryAccess",
+      palette: "green",
+    },
+    {
+      id: "services-points-all",
+      name: "Services points",
+      description: "Healthcare, pharmacy, school, official food retail and OSM grocery service points used by the essential services layers.",
+      kind: "point",
+      fileName: "milan_essential_services_points.geojson",
+      style: { color: "#10b981", opacity: 0.9 },
     },
   ];
 
@@ -378,8 +501,9 @@ function readServicesLayers(): MilanLayer[] {
 
 function readVulnerabilityLayers(): MilanLayer[] {
   const outputDirectory = path.join(DATA_ROOT, "vulnerability");
-  const boundaryFileName = "boundary_citta_metropolitana_milano.geojson";
-  const boundaryFilePath = path.join(outputDirectory, boundaryFileName);
+  const boundaryDirectory = path.join(DATA_ROOT, "context");
+  const boundaryFileName = "citta_metropolitana_milano_boundary.geojson";
+  const boundaryFilePath = path.join(boundaryDirectory, boundaryFileName);
 
   const layers: MilanLayer[] = [];
 
@@ -413,64 +537,85 @@ function readVulnerabilityLayers(): MilanLayer[] {
     > & { defaultVisible?: boolean; sourceFileName: string }
   > = [
     {
-      id: "vulnerability-age",
-      name: "age vulnerability",
-      description: "Residents aged 65+ joined to H3 resolution 9 cells.",
-      sourceFileName: "milan_metropolitan_vulnerability_h3_res9_2023.geojson",
-      thematicProperty: "elderly_65_plus_share",
-      thematicRankProperty: "elderly_65_plus_share_pct_rank",
-      palette: "blue",
-      style: { color: "#2f6690", opacity: 0.88 },
+      id: "vulnerability-elderly",
+      name: "Elderly vulnerability",
+      description: "Strict H3 elderly-population vulnerability component.",
+      sourceFileName: "h3_svi_elderly.geojson",
+      thematicProperty: "Elderly",
+      palette: "orange",
+      style: { color: "#d95f02", opacity: 0.82 },
     },
     {
       id: "vulnerability-employment",
-      name: "employment vulnerability",
-      description: "Employment proxy for non-employed residents aged 15-64.",
-      sourceFileName: "milan_metropolitan_vulnerability_h3_res9_2023.geojson",
-      thematicProperty: "not_employed_15_64_share",
-      thematicRankProperty: "not_employed_15_64_share_pct_rank",
+      name: "Employment vulnerability",
+      description: "Strict H3 labour-fragility / non-employment vulnerability component.",
+      sourceFileName: "h3_svi_labour.geojson",
+      thematicProperty: "Labour",
       palette: "red",
-      style: { color: "#c23b43", opacity: 0.88 },
-    },
-    {
-      id: "vulnerability-gender",
-      name: "gender vulnerability",
-      description: "Gender vulnerability from female residents share.",
-      sourceFileName: "milan_metropolitan_vulnerability_h3_res9_2023.geojson",
-      thematicProperty: "female_share",
-      thematicRankProperty: "female_share_pct_rank",
-      palette: "purple",
-      style: { color: "#6d4b9a", opacity: 0.88 },
+      style: { color: "#c23b43", opacity: 0.82 },
     },
     {
       id: "vulnerability-education",
-      name: "education vulnerability",
-      description: "Education vulnerability from low education share.",
-      sourceFileName: "milan_metropolitan_vulnerability_h3_res9_2023.geojson",
-      thematicProperty: "low_education_share",
-      thematicRankProperty: "low_education_share_pct_rank",
-      palette: "pink",
-      style: { color: "#ad3f7d", opacity: 0.88 },
+      name: "Education vulnerability",
+      description: "Strict H3 low-education vulnerability component.",
+      sourceFileName: "h3_svi_education.geojson",
+      thematicProperty: "Education",
+      palette: "purple",
+      style: { color: "#6d4b9a", opacity: 0.82 },
     },
     {
       id: "vulnerability-citizenship",
-      name: "citizenship vulnerability",
-      description: "Citizenship vulnerability from Extra-EU citizens share.",
-      sourceFileName: "milan_metropolitan_vulnerability_h3_res9_2023.geojson",
-      thematicProperty: "extra_eu_share",
-      thematicRankProperty: "extra_eu_share_pct_rank",
+      name: "Citizenship vulnerability",
+      description: "Strict H3 extra-EU citizenship vulnerability component.",
+      sourceFileName: "h3_svi_citizenship.geojson",
+      thematicProperty: "Citizenship",
+      palette: "blue",
+      style: { color: "#2f6690", opacity: 0.82 },
+    },
+    {
+      id: "vulnerability-income",
+      name: "Income vulnerability",
+      description: "Strict H3 low-income vulnerability component.",
+      sourceFileName: "h3_svi_income.geojson",
+      thematicProperty: "Income",
       palette: "brown",
-      style: { color: "#8f5b33", opacity: 0.88 },
+      style: { color: "#8f5b33", opacity: 0.82 },
+    },
+    {
+      id: "vulnerability-motorisation",
+      name: "Motorisation",
+      description: "Strict H3 motorisation component interpreted as private-mobility availability.",
+      sourceFileName: "h3_svi_motorisation.geojson",
+      thematicProperty: "Motorisation",
+      palette: "green",
+      style: { color: "#2d7f4f", opacity: 0.82 },
+    },
+    {
+      id: "vulnerability-low-car-access",
+      name: "Low car access",
+      description: "Strict H3 low private-mobility access signal computed from income and motorisation.",
+      sourceFileName: "h3_svi_low_car_access.geojson",
+      thematicProperty: "LowCarAccess",
+      palette: "teal",
+      style: { color: "#0f766e", opacity: 0.82 },
+    },
+    {
+      id: "vulnerability-car-dependency-stress",
+      name: "Car dependency stress",
+      description: "Strict H3 interpretation signal combining low income, motorisation and public transport deficit.",
+      sourceFileName: "h3_car_dependency_stress.geojson",
+      thematicProperty: "CarDependencyStress",
+      palette: "pink",
+      style: { color: "#ad3f7d", opacity: 0.82 },
     },
     {
       id: "vulnerability-index",
-      name: "vulnerability index",
-      description: "Composite social vulnerability index.",
-      sourceFileName: "milan_metropolitan_vulnerability_h3_res9_2023.geojson",
-      thematicProperty: "vulnerability_index_filled",
-      thematicClassProperty: "vulnerability_class",
-      palette: "orange",
-      style: { color: "#d95f02", opacity: 0.88 },
+      name: "Social vulnerability index",
+      description: "Strict composite Social Vulnerability Index from demographic, income and low-car-access signals.",
+      sourceFileName: "h3_social_vulnerability_index.geojson",
+      thematicProperty: "SVI",
+      palette: "indigo",
+      style: { color: "#4338ca", opacity: 0.88 },
       defaultVisible: true,
     },
   ];
@@ -504,61 +649,127 @@ function readEarthObservationLayers(): MilanLayer[] {
     Omit<MilanLayer, "group" | "filePath" | "sizeBytes">
   > = [
     {
-      id: "earth-observation-sdgsat1-night-lights",
-      name: "SDGSAT-1 night lights",
-      description:
-        "High-resolution night-time lights from GHS-SDGSAT-1 aggregated to the 100 m EO grid.",
+      id: "earth-observation-territorial-disadvantage",
+      name: "EO territorial disadvantage",
+      description: "Strict EO-Territorial Disadvantage Index from isolation, settlement pressure, growth pressure and demand intensity.",
+      kind: "polygon",
+      fileName: "h3_eo_territorial_disadvantage.geojson",
+      defaultVisible: true,
+      style: { color: "#e11d48", opacity: 0.76 },
+      thematicProperty: "EOTD",
+      palette: "pink",
+    },
+    {
+      id: "earth-observation-population-demand",
+      name: "Population demand",
+      description: "Strict H3 population-demand component used in EO territorial disadvantage.",
+      kind: "polygon",
+      fileName: "h3_population_demand.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "P",
+      palette: "purple",
+    },
+    {
+      id: "earth-observation-built-up-density",
+      name: "Built-up density",
+      description: "Strict H3 built-up density component.",
+      kind: "polygon",
+      fileName: "h3_built_up_density.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "B",
+      palette: "purple",
+    },
+    {
+      id: "earth-observation-artificial-land-cover",
+      name: "Artificial land cover",
+      description: "Strict H3 artificial land-cover share component.",
+      kind: "polygon",
+      fileName: "h3_artificial_land_cover.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "A",
+      palette: "purple",
+    },
+    {
+      id: "earth-observation-artificial-land-cover-100m",
+      name: "Artificial land cover 100m",
+      description: "Original 100 m artificial land-cover share surface for inspecting the source EO signal.",
+      kind: "polygon",
+      fileName: "eo_artificial_land_cover_100m.geojson",
+      style: { color: "#8b5cf6", opacity: 0.68 },
+      thematicProperty: "landcover_artificial_share",
+      thematicClassProperty: "artificial_landcover_class",
+      palette: "purple",
+    },
+    {
+      id: "earth-observation-nighttime-lights",
+      name: "Nighttime lights",
+      description: "Strict H3 nighttime-lights component.",
+      kind: "polygon",
+      fileName: "h3_night_time_lights.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "L",
+      palette: "purple",
+    },
+    {
+      id: "earth-observation-nighttime-lights-100m",
+      name: "Nighttime lights 100m",
+      description: "Original 100 m SDGSAT-1 nighttime-lights surface for inspecting the source EO signal.",
       kind: "polygon",
       fileName: "eo_night_lights_sdgsat1_100m_fast.geojson",
-      defaultVisible: true,
-      style: { color: "#7c3aed", opacity: 0.76 },
+      style: { color: "#8b5cf6", opacity: 0.68 },
       thematicProperty: "ntl_sdgsat1_lh_score",
       thematicClassProperty: "sdgsat1_night_lights_class",
       palette: "purple",
     },
     {
-      id: "earth-observation-artificial-land-cover",
-      name: "Artificial land-cover",
-      description: "Artificial surface share from ESA WorldCover 2021.",
+      id: "earth-observation-road-density",
+      name: "Road density",
+      description: "Strict H3 road-density component.",
       kind: "polygon",
-      fileName: "eo_artificial_land_cover_100m_fast.geojson",
-      style: { color: "#f97316", opacity: 0.76 },
-      thematicProperty: "landcover_artificial_share",
-      thematicClassProperty: "artificial_landcover_class",
-      palette: "orange",
+      fileName: "h3_road_density.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "RoadDensity",
+      palette: "purple",
     },
     {
-      id: "earth-observation-green-open-land-cover",
-      name: "Green/open land-cover",
-      description: "Green and open land-cover share from ESA WorldCover 2021.",
+      id: "earth-observation-intersection-density",
+      name: "Intersection density",
+      description: "Strict H3 intersection-density component.",
       kind: "polygon",
-      fileName: "eo_green_open_land_cover_100m_fast.geojson",
-      style: { color: "#16a34a", opacity: 0.76 },
-      thematicProperty: "landcover_green_open_share",
-      thematicClassProperty: "green_open_landcover_class",
+      fileName: "h3_intersection_density.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "IntersectionDensity",
+      palette: "purple",
+    },
+    {
+      id: "earth-observation-road-connectivity",
+      name: "Road connectivity",
+      description: "Strict H3 road-network connectivity component.",
+      kind: "polygon",
+      fileName: "h3_road_connectivity.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "R",
+      palette: "purple",
+    },
+    {
+      id: "earth-observation-green-land",
+      name: "Green land",
+      description: "Strict H3 green/open land-cover component.",
+      kind: "polygon",
+      fileName: "h3_green_open_land.geojson",
+      style: { color: "#16a34a", opacity: 0.72 },
+      thematicProperty: "G",
       palette: "green",
     },
     {
-      id: "earth-observation-built-up-density",
-      name: "Built-up density",
-      description: "Built-up surface density from GHSL GHS-BUILT-S 2020.",
+      id: "earth-observation-urban-growth",
+      name: "Urban growth",
+      description: "Strict H3 urban-growth pressure component.",
       kind: "polygon",
-      fileName: "eo_built_up_density_100m_fast.geojson",
-      style: { color: "#dc2626", opacity: 0.76 },
-      thematicProperty: "built_up_score",
-      thematicClassProperty: "built_up_density_class",
-      palette: "red",
-    },
-    {
-      id: "earth-observation-urban-growth-2010-2020",
-      name: "Urban growth 2010-2020",
-      description: "Built-up expansion from GHSL 2010 to 2020.",
-      kind: "polygon",
-      fileName: "eo_urban_growth_2010_2020_100m_fast.geojson",
-      style: { color: "#e11d48", opacity: 0.76 },
-      thematicProperty: "urban_growth_score_2010_2020",
-      thematicClassProperty: "urban_growth_2010_2020_class",
-      palette: "pink",
+      fileName: "h3_urban_growth.geojson",
+      style: { color: "#8b5cf6", opacity: 0.72 },
+      thematicProperty: "U",
+      palette: "purple",
     },
   ];
 
@@ -582,8 +793,23 @@ function resolveLayerAsset(outputDirectory: string, fileName: string) {
 
   if (!sizePath) return null;
 
+  const displayFileName = fileName.replace(/\.geojson$/, ".display.geojson");
+  const displayFilePath = path.join(outputDirectory, displayFileName);
+  const displaySizePath = [
+    displayFilePath,
+    `${displayFilePath}.br`,
+    `${displayFilePath}.gz`,
+  ].find((candidate) => existsSync(candidate));
+
   return {
     filePath,
     sizeBytes: statSync(sizePath).size,
+    ...(displaySizePath
+      ? {
+          displayFileName,
+          displayFilePath,
+          displaySizeBytes: statSync(displaySizePath).size,
+        }
+      : {}),
   };
 }

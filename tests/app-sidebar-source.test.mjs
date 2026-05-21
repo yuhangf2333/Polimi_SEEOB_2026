@@ -24,6 +24,27 @@ test("sidebar uses the redesigned day and night LIMEN logos", async () => {
   assert.match(nightLogo, /fill="#35C68A"/);
 });
 
+test("sidebar logo loads eagerly because it is above the fold", async () => {
+  const source = await readFile(sidebarSourcePath, "utf8");
+  const logoImageSource = source.slice(
+    source.indexOf("<Image"),
+    source.indexOf("<SidebarTrigger"),
+  );
+
+  assert.match(logoImageSource, /loading="eager"/);
+});
+
+test("sidebar theme toggle has an accessible name", async () => {
+  const source = await readFile(sidebarSourcePath, "utf8");
+  const themeToggleSource = source.slice(
+    source.indexOf('tooltip={theme === "dark" ? "Light mode" : "Dark mode"}'),
+    source.indexOf("<Sheet>"),
+  );
+
+  assert.match(themeToggleSource, /<span className="sr-only">/);
+  assert.match(themeToggleSource, /theme === "dark" \? "Light mode" : "Dark mode"/);
+});
+
 test("sidebar reuses the social and services score icons in monochrome style", async () => {
   const source = await readFile(sidebarSourcePath, "utf8");
 
@@ -88,4 +109,92 @@ test("left navigation only increases local menu font sizing", async () => {
   assert.match(source, /<SidebarGroupLabel className="text-sm">Platform<\/SidebarGroupLabel>/);
   assert.match(source, /className="text-\[15px\]"/);
   assert.match(source, /<SidebarMenuSubButton[\s\S]*className="[^"]*text-\[15px\][^"]*"/);
+});
+
+test("sidebar lists the requested full strict layer menu", async () => {
+  const source = await readFile(sidebarSourcePath, "utf8");
+
+  assert.doesNotMatch(source, /title: "Base"/);
+  assert.doesNotMatch(source, /Boundaries & Context/);
+
+  const vulnerabilitySource = source.slice(
+    source.indexOf('title: "Vulnerability"'),
+    source.indexOf('title: "Public Accessibility"'),
+  );
+  const publicAccessibilitySource = source.slice(
+    source.indexOf('title: "Public Accessibility"'),
+    source.indexOf('title: "Essential Services"'),
+  );
+  const servicesSource = source.slice(
+    source.indexOf('title: "Essential Services"'),
+    source.indexOf('title: "Earth Observation"'),
+  );
+  const earthObservationSource = source.slice(
+    source.indexOf('title: "Earth Observation"'),
+  );
+
+  const expectedVulnerability = [
+    ["Elderly vulnerability", "vulnerability-elderly"],
+    ["Employment vulnerability", "vulnerability-employment"],
+    ["Education vulnerability", "vulnerability-education"],
+    ["Citizenship vulnerability", "vulnerability-citizenship"],
+    ["Income vulnerability", "vulnerability-income"],
+    ["Motorisation", "vulnerability-motorisation"],
+    ["Low car access", "vulnerability-low-car-access"],
+    ["Car dependency stress", "vulnerability-car-dependency-stress"],
+    ["Social vulnerability index", "vulnerability-index"],
+  ];
+  const expectedPublicAccessibility = [
+    ["Public transport accessibility", "ptal-public-transport-accessibility"],
+    ["Public transport deficit", "ptal-public-transport-deficit"],
+    ["Service frequency", "ptal-service-frequency"],
+    ["Line availability", "ptal-line-availability"],
+    ["ptal", "ptal-ptal-100m-gtfs-netex"],
+    ["ptol", "ptal-ptol-100m-gtfs-netex"],
+    ["Stops all", "ptal-stops-all"],
+  ];
+  const expectedServices = [
+    ["Essential services accessibility", "services-essential-services-accessibility"],
+    ["Essential services deficit", "services-essential-service-deficit"],
+    ["Health access", "services-health-access"],
+    ["School access", "services-school-access"],
+    ["Job access", "services-job-access"],
+    ["Grocery access", "services-grocery-access"],
+    ["Services points", "services-points-all"],
+  ];
+  const expectedEarthObservation = [
+    ["EO territorial disadvantage", "earth-observation-territorial-disadvantage"],
+    ["Population demand", "earth-observation-population-demand"],
+    ["Built-up density", "earth-observation-built-up-density"],
+    ["Artificial land cover", "earth-observation-artificial-land-cover"],
+    ["Artificial land cover 100m", "earth-observation-artificial-land-cover-100m"],
+    ["Nighttime lights", "earth-observation-nighttime-lights"],
+    ["Nighttime lights 100m", "earth-observation-nighttime-lights-100m"],
+    ["Road density", "earth-observation-road-density"],
+    ["Intersection density", "earth-observation-intersection-density"],
+    ["Road connectivity", "earth-observation-road-connectivity"],
+    ["Green land", "earth-observation-green-land"],
+    ["Urban growth", "earth-observation-urban-growth"],
+  ];
+
+  for (const [title, layerId] of expectedVulnerability) {
+    assert.match(vulnerabilitySource, new RegExp(`title: "${title}"[\\s\\S]*layerId: "${layerId}"`));
+  }
+  for (const [title, layerId] of expectedPublicAccessibility) {
+    assert.match(publicAccessibilitySource, new RegExp(`title: "${title.replace("/", "\\/")}"[\\s\\S]*layerId: "${layerId}"`));
+  }
+  for (const [title, layerId] of expectedServices) {
+    assert.match(servicesSource, new RegExp(`title: "${title}"[\\s\\S]*layerId: "${layerId}"`));
+  }
+  for (const [title, layerId] of expectedEarthObservation) {
+    assert.match(earthObservationSource, new RegExp(`title: "${title}"[\\s\\S]*layerId: "${layerId}"`));
+  }
+
+  assert.doesNotMatch(vulnerabilitySource, /Gender vulnerability|vulnerability-gender/);
+  assert.doesNotMatch(
+    publicAccessibilitySource,
+    /old ptd|ptal-old-ptd|PTAL component|PTAL detailed 250m|PTOL component|PTOL detailed 250m|PTAL\/PTOL component/,
+  );
+  assert.doesNotMatch(servicesSource, /Essential service gap/);
+  assert.doesNotMatch(earthObservationSource, /SDGSAT-1 night lights|Green\/open land-cover|Urban growth 2010-2020/);
 });

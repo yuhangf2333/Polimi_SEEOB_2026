@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "build:display-geojson": "node scripts/build-display-geojson.mjs",
     "build": "next build",
     "postbuild": "node scripts/prepare-standalone.mjs",
-    "start": "next start",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint"
   },
   "dependencies": {
