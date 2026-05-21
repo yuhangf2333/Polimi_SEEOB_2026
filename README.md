@@ -32,7 +32,7 @@
 
 ## AI Assistant
 
-The AI assistant turns selected-area evidence into planning language. It can explain why a hotspot is critical, summarize dominant drivers, compare data confidence, suggest validation needs, and draft report-ready intervention notes from the dashboard context.
+The AI assistant turns selected map data into readable planning guidance. It can explain why a hotspot is critical, summarize dominant drivers, data confidence, suggest validation needs, formula and explain how the score is calculated.
 
 ```mermaid
 flowchart LR
