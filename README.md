@@ -17,9 +17,6 @@
   <img alt="GeoJSON" src="https://img.shields.io/badge/GeoJSON-local_data-35C68A?style=flat-square" />
 </p>
 
-<p align="center">
-  <img src="doc/image/readme_pic.png" alt="LIMEN dashboard preview" />
-</p>
 
 ## Features
 
@@ -28,6 +25,10 @@
 - Hotspot score, intervention priority index, data confidence, and typology layers.
 - Optional LLM assistant for evidence explanation and report-style interpretation.
 - Docker-ready production deployment with local GeoJSON data served through Next.js API routes.
+
+<p align="center">
+  <img src="doc/image/readme_pic.png" alt="LIMEN dashboard preview" />
+</p>
 
 ## AI Assistant
 
